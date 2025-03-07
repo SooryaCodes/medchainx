@@ -8,11 +8,9 @@ const GOOGLE_CLOUD_PROJECT = process.env.GOOGLE_CLOUD_PROJECT;
 const GOOGLE_CLOUD_LOCATION = process.env.GOOGLE_CLOUD_LOCATION || 'us-central1';
 const GOOGLE_CLOUD_DATASET = process.env.GOOGLE_CLOUD_DATASET;
 const GOOGLE_CLOUD_FHIR_STORE = process.env.GOOGLE_CLOUD_FHIR_STORE;
-const CLIENT_ID = process.env.GOOGLE_CLOUD_CLIENT_ID;
 
 // Configure Google Auth Client
 const auth = new google.auth.GoogleAuth({
-  clientId: CLIENT_ID,
   scopes: ['https://www.googleapis.com/auth/cloud-healthcare']
 });
 

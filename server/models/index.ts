@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose";
+import jwt from "jsonwebtoken";
 
 // 1️⃣ Hospital Schema
 export interface IHospital extends Document {
@@ -99,6 +100,7 @@ export interface IPatient extends Document {
   maritalStatus?: string;
   occupation?: string;
   lastVisitDate?: Date;
+  generateAuthToken: () => string;
 }
 
 const PatientSchema = new Schema<IPatient>({
@@ -142,6 +144,15 @@ const PatientSchema = new Schema<IPatient>({
   occupation: { type: String },
   lastVisitDate: { type: Date }
 });
+
+// Add the method to the schema
+PatientSchema.methods.generateAuthToken = function() {
+  return jwt.sign(
+    { id: this._id, role: 'patient' },
+    process.env.JWT_SECRET || 'your-secret-key',
+    { expiresIn: '30d' }
+  );
+};
 
 export const PatientModel = mongoose.model<IPatient>("Patient", PatientSchema);
 
