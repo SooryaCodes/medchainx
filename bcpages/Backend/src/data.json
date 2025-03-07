@@ -1,4 +1,29 @@
 {
-  "patients": [],
+  "patients": [
+    {
+      "id": "patient-1741372981507-632",
+      "name": "John Doe",
+      "age": 30,
+      "diagnosis": "Flu",
+      "description": "Fever, chills, and body ache",
+      "timestamp": "2025-03-07T18:43:01.507Z",
+      "file": {
+        "fileName": "test-report.pdf",
+        "fileContent": "JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PC9..."
+      }
+    },
+    {
+      "id": "patient-1741373015550-382",
+      "name": "John Doe",
+      "age": 30,
+      "diagnosis": "Flu",
+      "description": "Fever, chills, and body ache",
+      "timestamp": "2025-03-07T18:43:35.550Z",
+      "file": {
+        "fileName": "test-report.pdf",
+        "fileContent": "JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PC9..."
+      }
+    }
+  ],
   "hospitals": []
 }
