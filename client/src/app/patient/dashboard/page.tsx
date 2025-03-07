@@ -33,6 +33,7 @@ import { HealthCharts } from "@/components/features/dashboard/HealthCharts";
 import { AiHealthInsights } from "@/components/features/dashboard/AiHealthInsights";
 import { usePatient } from "@/context/PatientContext";
 import { useRouter } from "next/navigation";
+import axios from "@/lib/axios";
 
 import { PatientProfile } from "@/components/features/patient/PatientProfile";
 // Define interface for medical record
@@ -202,6 +203,26 @@ const mockChartData = {
   }
 };
 
+// Define the fetchHealthRisks function before using it in useEffect
+const fetchHealthRisks = async () => {
+  if (!patient || !patient.id) return;
+  
+  setIsLoadingRisks(true);
+  setRiskError(null);
+  
+  try {
+    const response = await axios.get(`/${patient.id}/health-risks`);
+    if (response.data && Array.isArray(response.data)) {
+      setRiskFactors(response.data);
+    }
+  } catch (error) {
+    console.error("Error fetching health risks:", error);
+    setRiskError("Failed to load health risk data. Please try again later.");
+  } finally {
+    setIsLoadingRisks(false);
+  }
+};
+
 export default function PatientDashboard() {
   const { patient, loading, error, logout, token, fetchPatient, remainingTime, setRemainingTime } = usePatient();
   const router = useRouter();
@@ -217,6 +238,13 @@ export default function PatientDashboard() {
   const [formattedTime, setFormattedTime] = useState<string | null>(null);
   const [showProfile, setShowProfile] = useState(false);
   const [patientMedicalRecords, setPatientMedicalRecords] = useState<DashboardMedicalRecord[]>([]);
+  const [riskFactors, setRiskFactors] = useState([
+    { name: "Cardiovascular Disease", risk: "Moderate", score: 65, recommendations: ["Regular exercise", "Low-sodium diet", "Stress management"] },
+    { name: "Type 2 Diabetes", risk: "Low", score: 30, recommendations: ["Regular blood sugar monitoring", "Balanced diet"] },
+    { name: "Hypertension", risk: "High", score: 80, recommendations: ["Blood pressure monitoring", "Medication adherence", "Reduced salt intake"] }
+  ]);
+  const [isLoadingRisks, setIsLoadingRisks] = useState(false);
+  const [riskError, setRiskError] = useState<string | null>(null);
 
   // Transform MongoDB medical reports to DashboardMedicalRecord format when patient data is loaded
   useEffect(() => {
@@ -515,6 +543,13 @@ export default function PatientDashboard() {
   const handleCloseProfile = () => {
     setShowProfile(false);
   };
+  
+  // Now use it in useEffect
+  useEffect(() => {
+    if (activeTab === "risks") {
+      fetchHealthRisks();
+    }
+  }, [activeTab, patient]);
   
   return (
     <div className="container mx-auto p-6">
@@ -1063,9 +1098,26 @@ export default function PatientDashboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
+                {isLoadingRisks ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                  </div>
+                ) : riskError ? (
+                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-center">
+                    <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+                    <p className="text-red-600 dark:text-red-400">{riskError}</p>
+                    <Button 
+                      variant="outline" 
+                      className="mt-4"
+                      onClick={fetchHealthRisks}
+                    >
+                      Try Again
+                    </Button>
+                  </div>
+                ) : (
                 <div className="space-y-4">
                   {riskFactors.map((factor, index) => (
-                    <div key={index} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
+                      <div key={index} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all">
                       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-2">
                         <h4 className="font-semibold">{factor.name}</h4>
                         <span className={`text-sm font-medium px-2 py-1 rounded-full ${
@@ -1088,6 +1140,7 @@ export default function PatientDashboard() {
                     </div>
                   ))}
                 </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
