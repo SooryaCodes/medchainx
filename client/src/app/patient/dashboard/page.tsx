@@ -256,6 +256,7 @@ export default function PatientDashboard() {
   const [tokenExpiry, setTokenExpiry] = useState<Date | null>(null);
   const [tokenCreationTime, setTokenCreationTime] = useState<Date | null>(null);
   const [originalDuration, setOriginalDuration] = useState<number>(60 * 60 * 1000); // Default 1h
+  const [formattedTime, setFormattedTime] = useState<string | null>(null);
 
   const handleRecordSelect = (record: MedicalRecord) => {
     setSelectedMedicalRecord(record);
@@ -386,13 +387,13 @@ export default function PatientDashboard() {
         return;
       }
       
-      const hours = Math.floor(diff / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-      
-      setRemainingTime(
-        `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
-      );
+      // Format the time as a string before setting it
+      const totalSeconds = diff / 1000;
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = Math.floor(totalSeconds % 60);
+      setRemainingTime(totalSeconds.toString());
+      setFormattedTime(`${hours}:${minutes}:${seconds}`);
     };
     
     updateRemainingTime();
@@ -654,7 +655,7 @@ export default function PatientDashboard() {
                     <div className="flex items-center">
                       <div className="w-2.5 h-2.5 bg-blue-500 rounded-full mr-2 animate-pulse"></div>
                       <span className="text-lg font-mono font-bold bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-md text-blue-700 dark:text-blue-300 tracking-wider">
-                        {remainingTime}
+                        {formattedTime}
                       </span>
                     </div>
                   </div>
@@ -776,7 +777,7 @@ export default function PatientDashboard() {
             
             <div className="flex items-center justify-between mb-1.5 text-xs">
               <span className="text-gray-600 dark:text-gray-400">Expires in:</span>
-              <span className="font-mono font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded">{remainingTime}</span>
+              <span className="font-mono font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded">{formattedTime}</span>
             </div>
             
             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
@@ -840,7 +841,7 @@ export default function PatientDashboard() {
                           <h3 className="text-xl font-bold">Active Access Token</h3>
                           <div className="flex items-center mt-1">
                             <div className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse"></div>
-                            <p className="text-blue-100">Expires in: {remainingTime}</p>
+                            <p className="text-blue-100">Expires in: {formattedTime}</p>
                           </div>
                         </>
                       ) : (

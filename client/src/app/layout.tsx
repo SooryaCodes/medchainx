@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Manrope } from "next/font/google";
 import "./globals.css";
 import { Toaster } from 'react-hot-toast';
+import Providers from '@/components/Providers';
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -23,7 +24,9 @@ export default function RootLayout({
       <body
         className={`${manrope.variable} ${manrope.className} antialiased`}
       >
-        {children}
+        <Providers>
+          {children}
+        </Providers>
         <Toaster position="top-right" />
       </body>
     </html>

@@ -13,9 +13,17 @@ export function middleware(request: NextRequest) {
     }
   }
   
+  // Check if trying to access register page while already authenticated
+  if (request.nextUrl.pathname === '/register' || request.nextUrl.pathname === '/register/') {
+    // If token exists, redirect to patient dashboard
+    if (patientToken && patientId) {
+      return NextResponse.redirect(new URL('/patient/dashboard', request.url));
+    }
+  }
+  
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/patient/:path*'],
+  matcher: ['/patient/:path*', '/register'],
 }; 
