@@ -7,11 +7,11 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 
 // Import routes
-import authRoutes from './routes/auth.routes';
+// import authRoutes from './routes/auth.routes';
 import patientRoutes from './routes/patient.routes';
-import doctorRoutes from './routes/doctor.routes';
-import hospitalRoutes from './routes/hospital.routes';
-import medicalRecordRoutes from './routes/medicalRecord.routes';
+// import doctorRoutes from './routes/doctor.routes';
+// import hospitalRoutes from './routes/hospital.routes';
+// import medicalRecordRoutes from './routes/medicalRecord.routes';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
