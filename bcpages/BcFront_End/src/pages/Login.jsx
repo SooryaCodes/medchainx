@@ -17,7 +17,7 @@ const Login = () => {
     return (
         <div className="flex flex-col items-center justify-center h-screen bg-gray-100">
             <div className="p-6 bg-white rounded shadow-md w-80">
-                <h2 className="text-xl font-semibold mb-4">Login</h2>
+                <h2 className="text-xl font-semibold mb-4">Enter</h2>
                 <select 
                     className="w-full p-2 border rounded mb-4"
                     value={role} 
@@ -30,7 +30,7 @@ const Login = () => {
                     className="w-full bg-blue-500 text-white py-2 rounded"
                     onClick={handleLogin}
                 >
-                    Login
+                    Enter
                 </button>
             </div>
         </div>

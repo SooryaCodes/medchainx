@@ -14,21 +14,21 @@ const Navbar = () => {
   return (
     <>
       {/* Navbar */}
-      <nav className="bg-white shadow-md p-4 flex justify-between items-center">
+      <nav className="bg-blue-600 shadow-md p-4 flex justify-between items-center">
         {/* Hamburger Menu Button */}
-        <button onClick={toggleSidebar} className="text-gray-600">
+        <button onClick={toggleSidebar} className="text-white">
           {sidebarOpen ? <FiX size={28} /> : <FiMenu size={28} />}
         </button>
 
         {/* Brand Title */}
-        <Link to="/" className="text-xl font-bold text-blue-600">
+        <Link to="/" className="text-xl font-bold text-white">
           MedChainX
         </Link>
 
         {/* Login Button */}
         <button
           onClick={openLogin}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          className="bg-white text-blue-600 px-4 py-2 rounded-lg hover:bg-gray-200"
         >
           Login
         </button>
@@ -36,18 +36,18 @@ const Navbar = () => {
 
       {/* Sidebar */}
       {sidebarOpen && (
-        <div className="fixed top-0 left-0 h-full w-64 bg-gray-100 shadow-lg">
-          <button onClick={toggleSidebar} className="absolute top-4 right-4 text-gray-600">
+        <div className="fixed top-0 left-0 h-full w-64 bg-white shadow-lg z-50">
+          <button onClick={toggleSidebar} className="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
             <FiX size={28} />
           </button>
           <div className="mt-16 flex flex-col space-y-4 p-6">
-            <Link to="/" className="text-gray-700 hover:text-blue-500" onClick={toggleSidebar}>
+            <Link to="/" className="text-gray-800 hover:text-blue-500" onClick={toggleSidebar}>
               Home
             </Link>
-            <Link to="/appointment" className="text-gray-700 hover:text-blue-500" onClick={toggleSidebar}>
+            <Link to="/appointment" className="text-gray-800 hover:text-blue-500" onClick={toggleSidebar}>
               Appointment
             </Link>
-            <Link to="/help" className="text-gray-700 hover:text-blue-500" onClick={toggleSidebar}>
+            <Link to="/help" className="text-gray-800 hover:text-blue-500" onClick={toggleSidebar}>
               Help
             </Link>
           </div>
