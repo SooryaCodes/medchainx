@@ -7,6 +7,7 @@ import PatientRegistration from "./components/OnboardingSteps/PatientRegistratio
 import DoctorRegistration from "./components/OnboardingSteps/DoctorRegistration";
 import HospitalRegistration from "./components/OnboardingSteps/HospitalRegistration";
 import RegistrationHeader from "./components/RegistrationHeader";
+import AppFeatures from "./components/AppFeatures";
 
 export default function RegisterPage() {
   const [userType, setUserType] = useState<"patient" | "hospital" | "doctor" | null>(null);
@@ -56,34 +57,14 @@ export default function RegisterPage() {
             <p className="text-blue-100 text-xl mb-8">
               Discover the world's most advanced EMR solution for patients, doctors, and hospitals.
             </p>
-            
-            {/* Testimonial Card */}
-            <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl border border-white/20 mt-12">
-              <p className="text-white italic mb-4">
-                "MedChainX has revolutionized how we manage patient records. The platform is intuitive and secure."
-              </p>
-              <div className="flex items-center">
-                <div className="w-10 h-10 rounded-full bg-blue-500 mr-3"></div>
-                <div>
-                  <p className="text-white font-medium">Dr. Sarah Johnson</p>
-                  <p className="text-blue-200 text-sm">Chief Medical Officer</p>
-                </div>
+            <div className="hidden md:block md:col-span-2">
+                <AppFeatures />
               </div>
-            </div>
+          
           </div>
         </div>
         
-        {/* Bottom Section */}
-        <div className="mt-auto pt-8">
-          <div className="flex space-x-2">
-            {[...Array(3)].map((_, i) => (
-              <div 
-                key={i} 
-                className={`h-2 rounded-full ${i === 0 ? 'w-8 bg-white' : 'w-2 bg-white/40'}`}
-              ></div>
-            ))}
-          </div>
-        </div>
+      
       </div>
       
       {/* Right Column - Registration Form */}
@@ -92,7 +73,12 @@ export default function RegisterPage() {
         
         <div className="max-w-2xl mx-auto px-6 py-12">
           {!userType ? (
-            <UserTypeSelection onSelect={handleUserTypeSelect} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="md:col-span-2">
+                <UserTypeSelection onSelect={handleUserTypeSelect} />
+              </div>
+            
+            </div>
           ) : (
             <div className="space-y-8">
               <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-blue-100 dark:border-blue-900/30">
@@ -108,7 +94,7 @@ export default function RegisterPage() {
                 </div>
                 <div className="h-2 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                   <div 
-                    className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-500 rounded-full"
+                    className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500 rounded-full"
                     style={{ width: `${(step / maxSteps) * 100}%` }}
                   ></div>
                 </div>
@@ -138,7 +124,7 @@ export default function RegisterPage() {
                 
                 <Button 
                   onClick={step === maxSteps ? handleSubmit : handleNext}
-                  className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md hover:shadow-lg transition-all duration-300"
+                  className="gap-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 shadow-md hover:shadow-lg transition-all duration-300"
                 >
                   {step === maxSteps ? "Complete Registration" : "Continue"}
                   {step !== maxSteps && <ChevronRight className="h-4 w-4" />}

@@ -9,9 +9,9 @@ import {
   Zap, 
   Globe, 
   Lock, 
-  FileText,
-  CheckCircle
+  FileText
 } from "lucide-react";
+import FeatureCard from "@/components/features/FeatureCard";
 
 const features = [
   {
@@ -68,15 +68,8 @@ export default function AppFeatures() {
   }, []);
   
   return (
-    <div className="space-y-8 ">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-blue-600 mb-3">
-          Welcome to MedChainX
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto">
-          The next generation healthcare management platform designed for patients, doctors, and hospitals
-        </p>
-      </div>
+    <div className="space-y-8">
+ 
       
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-blue-100 dark:border-blue-900/30">
         <div className="flex items-center mb-6">
@@ -106,33 +99,16 @@ export default function AppFeatures() {
           ))}
         </div>
         
-        <div className="space-y-3 mt-8 max-h-[300px] overflow-y-auto pr-2">
+        <div className="space-y-1">
           {features.map((feature, index) => (
-            <div 
+            <FeatureCard
               key={index}
-              className={`flex items-start p-3 rounded-lg transition-all ${
-                index === activeIndex 
-                  ? "bg-blue-50 dark:bg-blue-900/10 border-l-4 border-blue-500" 
-                  : "hover:bg-gray-50 dark:hover:bg-gray-700/30"
-              }`}
+              icon={feature.icon}
+              title={feature.title}
+              description={feature.description}
+              isActive={index === activeIndex}
               onClick={() => setActiveIndex(index)}
-            >
-              <div className={`flex-shrink-0 mr-3 mt-1 ${index === activeIndex ? "text-blue-600" : "text-gray-400"}`}>
-                {index === activeIndex ? <CheckCircle className="h-5 w-5" /> : feature.icon}
-              </div>
-              <div>
-                <h4 className={`font-medium ${
-                  index === activeIndex ? "text-blue-600 dark:text-blue-400" : "text-gray-700 dark:text-gray-300"
-                }`}>
-                  {feature.title}
-                </h4>
-                {index === activeIndex && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    {feature.description}
-                  </p>
-                )}
-              </div>
-            </div>
+            />
           ))}
         </div>
       </div>
