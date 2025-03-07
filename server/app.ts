@@ -11,7 +11,6 @@ import authRoutes from './routes/auth.routes';
 import patientRoutes from './routes/patient.routes';
 import doctorRoutes from './routes/doctor.routes';
 import hospitalRoutes from './routes/hospital.routes';
-import appointmentRoutes from './routes/appointment.routes';
 import medicalRecordRoutes from './routes/medicalRecord.routes';
 
 // Import middleware
