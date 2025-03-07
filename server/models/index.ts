@@ -104,8 +104,6 @@ export interface IPatient extends Document {
   nationalId: string;
   doctors: mongoose.Types.ObjectId[];
   medicalReports: IMedicalReport[];
-  appointments: mongoose.Types.ObjectId[];
-  prescriptions: mongoose.Types.ObjectId[];
   generateAuthToken(): string;
 }
 
@@ -253,9 +251,7 @@ const PatientSchema = new Schema<IPatient>({
   healthInsuranceId: { type: String },
   nationalId: { type: String },
   doctors: [{ type: Schema.Types.ObjectId, ref: 'Doctor' }],
-  medicalReports: [MedicalReportSchema],
-  appointments: [{ type: Schema.Types.ObjectId, ref: 'Appointment' }],
-  prescriptions: [{ type: Schema.Types.ObjectId, ref: 'Prescription' }]
+  medicalReports: [MedicalReportSchema]
 }, {
   timestamps: true
 });
@@ -270,4 +266,33 @@ PatientSchema.methods.generateAuthToken = function() {
 };
 
 export const MedicalReportModel = mongoose.model<IMedicalReport>('MedicalReport', MedicalReportSchema);
-export const PatientModel = mongoose.model<IPatient>('Patient', PatientSchema); 
+export const PatientModel = mongoose.model<IPatient>('Patient', PatientSchema);
+
+// Add Prescription schema definition
+export interface IPrescription extends Document {
+  medication: string;
+  dosage: string;
+  frequency: string;
+  startDate: Date;
+  endDate: Date;
+  instructions: string;
+  patientId: mongoose.Types.ObjectId;
+  doctorId: mongoose.Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const PrescriptionSchema = new Schema<IPrescription>({
+  medication: { type: String, required: true },
+  dosage: { type: String, required: true },
+  frequency: { type: String, required: true },
+  startDate: { type: Date, required: true },
+  endDate: { type: Date, required: true },
+  instructions: { type: String },
+  patientId: { type: Schema.Types.ObjectId, ref: 'Patient', required: true },
+  doctorId: { type: Schema.Types.ObjectId, ref: 'Doctor', required: true }
+}, {
+  timestamps: true
+});
+
+export const PrescriptionModel = mongoose.model<IPrescription>('Prescription', PrescriptionSchema);

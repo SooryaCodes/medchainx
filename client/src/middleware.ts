@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  const patientToken = request.cookies.get('token')?.value;
+  const patientToken = request.cookies.get('patientToken')?.value;
   const patientId = request.cookies.get('patientId')?.value;
   
   // Check if the path starts with /patient

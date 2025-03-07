@@ -41,11 +41,52 @@ export const PatientProvider: React.FC<PatientProviderProps> = ({ children }) =>
 
   const isAuthenticated = !!token;
 
+  const fetchPatient = async () => {
+    if (!cookies.patientToken || !cookies.patientId) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      console.log('Fetching patient data...', {
+        patientId: cookies.patientId,
+        patientToken: cookies.patientToken
+      });
+      
+      const response = await axiosInstance.get(`/patient/${cookies.patientId}`, {
+        headers: {
+          Authorization: `Bearer ${cookies.patientToken}`
+        }
+      });
+      console.log('Patient data response:', response.data);
+      
+      if (response.data && response.data.data) {
+        setPatient(response.data.data);
+        setError(null);
+      } else {
+        setError('Failed to fetch patient data');
+      }
+    } catch (err: any) {
+      console.error('Error fetching patient data:', err);
+      setError(err.response?.data?.message || 'An error occurred while fetching patient data');
+      if (err.response?.status === 401) {
+        logout();
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
+    console.log('PatientProvider checking for token...');
     // Check if token exists in cookies
     const storedToken = cookies.patientToken;
+    console.log('Stored token:', storedToken);
+    
     if (storedToken) {
       setToken(storedToken);
+      // Call fetchPatient directly
       fetchPatient();
     } else {
       setLoading(false);
@@ -55,36 +96,6 @@ export const PatientProvider: React.FC<PatientProviderProps> = ({ children }) =>
       }
     }
   }, [cookies.patientToken]);
-
-  const fetchPatient = async () => {
-    if (!cookies.patientToken || !cookies.patientId) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const response = await axiosInstance.get(`/patient/${cookies.patientId}`, {
-        headers: {
-          Authorization: `Bearer ${cookies.patientToken}`
-        }
-      });
-      
-      if (response.data && response.data.data) {
-        setPatient(response.data.data);
-        setError(null);
-      } else {
-        setError('Failed to fetch patient data');
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'An error occurred while fetching patient data');
-      if (err.response?.status === 401) {
-        logout();
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const logout = () => {
     removeCookie('patientToken');

@@ -244,8 +244,7 @@ const mockChartData = {
 };
 
 export default function PatientDashboard() {
-  // Use the patient context
-  const { patient, loading, error, logout, token, remainingTime, setRemainingTime } = usePatient();
+  const { patient, loading, error, logout, token, fetchPatient, remainingTime, setRemainingTime } = usePatient();
   const router = useRouter();
   
   const [activeTab, setActiveTab] = useState("overview");
@@ -304,7 +303,14 @@ export default function PatientDashboard() {
     };
     
     checkExistingToken();
-  }, []);
+    
+    // Add this code to fetch patient data
+    console.log('Dashboard mounted, checking if patient data needs to be fetched...');
+    if (token && !patient) {
+      console.log('Token exists but no patient data, fetching patient data...');
+      fetchPatient();
+    }
+  }, [token, patient, fetchPatient]);
 
   const handleGenerateToken = () => {
     setIsGeneratingToken(true);
@@ -362,7 +368,7 @@ export default function PatientDashboard() {
       
       // Set cookies with token, expiry and creation time
       document.cookie = `medToken=${token}; expires=${expiryTime.toUTCString()}; path=/; secure; samesite=strict`;
-      document.cookie = `medTokenExpiry=${expiryTime.toUTCString()}; expires=${expiryTime.toUTCString()}; path=/; secure; samesite=strict`;
+      document.cookie = `Expiry=${expiryTime.toUTCString()}; expires=${expiryTime.toUTCString()}; path=/; secure; samesite=strict`;
       document.cookie = `medTokenCreated=${creationTime.toUTCString()}; expires=${expiryTime.toUTCString()}; path=/; secure; samesite=strict`;
     }, 1500);
   };
@@ -812,6 +818,54 @@ export default function PatientDashboard() {
           
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
+            {/* Patient Information Card */}
+            {patient && (
+              <Card className="bg-white/90 dark:bg-gray-800/90 hover:shadow-md transition-all border border-gray-100 dark:border-gray-700 mb-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <User className="h-5 w-5 mr-2 text-primary" />
+                    Patient Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="font-medium text-gray-500 dark:text-gray-400 mb-1">Personal Details</h4>
+                      <div className="space-y-2">
+                        <p><span className="font-medium">Name:</span> {patient?.name?.given?.join(' ') || 'N/A'} {patient?.name?.family || ''}</p>
+                        <p><span className="font-medium">Date of Birth:</span> {patient?.birthDate ? new Date(patient.birthDate).toLocaleDateString() : 'N/A'}</p>
+                        <p><span className="font-medium">Gender:</span> {patient?.gender ? patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1) : 'N/A'}</p>
+                        <p><span className="font-medium">Blood Type:</span> {patient?.bloodType || 'N/A'}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-gray-500 dark:text-gray-400 mb-1">Contact Information</h4>
+                      <div className="space-y-2">
+                        <p><span className="font-medium">Email:</span> {patient?.contact?.email || 'N/A'}</p>
+                        <p><span className="font-medium">Phone:</span> {patient?.contact?.phone || 'N/A'}</p>
+                        <p><span className="font-medium">Address:</span> {patient?.address ? `${patient.address.street || ''} ${patient.address.city || ''} ${patient.address.state || ''} ${patient.address.postalCode || ''}` : 'N/A'}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-gray-500 dark:text-gray-400 mb-1">Emergency Contact</h4>
+                      <div className="space-y-2">
+                        <p><span className="font-medium">Name:</span> {patient?.emergencyContact?.name || 'N/A'}</p>
+                        <p><span className="font-medium">Phone:</span> {patient?.emergencyContact?.phone || 'N/A'}</p>
+                        <p><span className="font-medium">Relationship:</span> {patient?.emergencyContact?.relationship ? patient.emergencyContact.relationship.charAt(0).toUpperCase() + patient.emergencyContact.relationship.slice(1) : 'N/A'}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-gray-500 dark:text-gray-400 mb-1">Insurance & ID</h4>
+                      <div className="space-y-2">
+                        <p><span className="font-medium">Health Insurance ID:</span> {(patient as any)?.healthInsuranceId || 'N/A'}</p>
+                        <p><span className="font-medium">National ID:</span> {(patient as any)?.nationalId || 'N/A'}</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            
             {/* Prominent Token Generation Card - Enhanced with active token display */}
             <Card className={`${generatedToken ? 'bg-gradient-to-r from-blue-500 to-blue-700 dark:from-blue-600 dark:to-blue-800' : 'bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700'} text-white hover:shadow-lg transition-all border-none mb-6`}>
               <CardContent className="pt-6">
@@ -941,16 +995,74 @@ export default function PatientDashboard() {
           
           {/* Medical History Tab */}
           <TabsContent value="history" className="space-y-6">
-            {selectedMedicalRecord ? (
-              <MedicalRecordDetail 
-                record={selectedMedicalRecord} 
-                onClose={handleCloseRecord} 
-              />
+            {(patient as any)?.medicalReports && (patient as any).medicalReports.length > 0 ? (
+              <Card className="bg-white/90 dark:bg-gray-800/90 hover:shadow-md transition-all border border-gray-100 dark:border-gray-700">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <FileText className="h-5 w-5 mr-2 text-primary" />
+                    Medical Reports
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {(patient as any).medicalReports.map((report: any, index: number) => (
+                      <div key={index} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-2">
+                          <h4 className="font-semibold">{report.title}</h4>
+                          <div className="flex items-center">
+                            <span className="text-sm text-gray-500 mr-2">{new Date(report.date).toLocaleDateString()}</span>
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                              {report.status}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{report.content}</p>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          <span className="text-xs text-gray-500">Doctor: {report.doctorName}</span>
+                          {report.tags && report.tags.map((tag: any, i: number) => (
+                            <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                        {report.labReport && (
+                          <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                            <h5 className="font-medium text-sm mb-2">Lab Results: {report.labReport.testName}</h5>
+                            <div className="space-y-2">
+                              {report.labReport.results.map((result: any, i: number) => (
+                                <div key={i} className="grid grid-cols-3 gap-2 text-sm">
+                                  <span>{result.parameter}</span>
+                                  <span className="font-medium">{result.value}</span>
+                                  <span className={`${
+                                    result.interpretation === "normal" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                                  }`}>
+                                    {result.interpretation}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="mt-2 text-xs text-gray-500">
+                              Lab: {report.labReport.labName} | Technician: {report.labReport.technician}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
             ) : (
-              <MedicalHistoryList 
-                records={medicalHistory} 
-                onSelectRecord={handleRecordSelect} 
-              />
+              selectedMedicalRecord ? (
+                <MedicalRecordDetail 
+                  record={selectedMedicalRecord} 
+                  onClose={handleCloseRecord} 
+                />
+              ) : (
+                <MedicalHistoryList 
+                  records={medicalHistory} 
+                  onSelectRecord={handleRecordSelect} 
+                />
+              )
             )}
           </TabsContent>
           
@@ -965,32 +1077,68 @@ export default function PatientDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {medications.map((medication, index) => (
-                    <div key={index} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all">
-                      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-3">
-                        <h4 className="font-semibold">{medication.name}</h4>
-                        <span className="text-sm text-gray-500">Refill by: {medication.refillDate}</span>
+                  {(patient as any)?.prescriptions && (patient as any).prescriptions.length > 0 ? (
+                    (patient as any).prescriptions.map((prescription: any, index: number) => (
+                      <div key={index} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-3">
+                          <h4 className="font-semibold">{prescription.medication}</h4>
+                          <div className="flex items-center">
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 mr-2">
+                              Active
+                            </span>
+                            <span className="text-sm text-gray-500">
+                              Until: {new Date(prescription.endDate).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
+                          <div>
+                            <span className="text-gray-500">Dosage:</span> {prescription.dosage}
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Frequency:</span> {prescription.frequency}
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Prescribed by:</span> {prescription.prescribedBy}
+                          </div>
+                        </div>
+                        {prescription.instructions && (
+                          <div className="mt-3 pt-2 border-t border-gray-100 dark:border-gray-700">
+                            <p className="text-sm">
+                              <span className="text-gray-500">Instructions:</span> {prescription.instructions}
+                            </p>
+                          </div>
+                        )}
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
-                        <div>
-                          <span className="text-gray-500">Dosage:</span> {medication.dosage}
+                    ))
+                  ) : (
+                    medications.map((medication: any, index: number) => (
+                      <div key={index} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-3">
+                          <h4 className="font-semibold">{medication.name}</h4>
+                          <span className="text-sm text-gray-500">Refill by: {medication.refillDate}</span>
                         </div>
-                        <div>
-                          <span className="text-gray-500">Frequency:</span> {medication.frequency}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
+                          <div>
+                            <span className="text-gray-500">Dosage:</span> {medication.dosage}
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Frequency:</span> {medication.frequency}
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Purpose:</span> {medication.purpose}
+                          </div>
                         </div>
-                        <div>
-                          <span className="text-gray-500">Purpose:</span> {medication.purpose}
+                        <div className="mt-3">
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Adherence Rate:</p>
+                          <div className="flex items-center">
+                            <Progress value={medication.adherence} className="h-2 flex-1" />
+                            <span className="ml-2 text-sm font-medium">{medication.adherence}%</span>
+                          </div>
                         </div>
                       </div>
-                      <div className="mt-3">
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Adherence Rate:</p>
-                        <div className="flex items-center">
-                          <Progress value={medication.adherence} className="h-2 flex-1" />
-                          <span className="ml-2 text-sm font-medium">{medication.adherence}%</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </CardContent>
               <CardFooter>
@@ -1001,7 +1149,7 @@ export default function PatientDashboard() {
           
           {/* AI Insights Tab */}
           <TabsContent value="insights" className="space-y-6">
-            <AiHealthInsights patientName="John" />
+            <AiHealthInsights patientName={patient?.name?.given?.[0] || "John"} />
           </TabsContent>
         </Tabs>
       </div>

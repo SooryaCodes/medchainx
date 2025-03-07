@@ -28,7 +28,7 @@ export interface RegistrationResponse {
   success: boolean;
   data: {
     patientId: string;
-    token: string;
+    patientToken: string;
   };
   message: string;
 } 

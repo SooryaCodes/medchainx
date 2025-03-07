@@ -43,6 +43,60 @@ interface PatientRegistrationData {
   nationalId: string;
 }
 
+// Add this interface for medical reports
+interface MedicalReport {
+  _id?: string;
+  title: string;
+  date: Date;
+  doctorId: mongoose.Types.ObjectId;
+  doctorName: string;
+  type: 'general' | 'prescription' | 'labReport' | 'doctorNote' | 'referral' | 'imaging';
+  content: string;
+  
+  // For prescriptions
+  prescription?: {
+    medication: string;
+    dosage: string;
+    frequency: string;
+    startDate: Date;
+    endDate: Date;
+    instructions: string;
+  };
+  
+  // For lab reports
+  labReport?: {
+    testName: string;
+    testDate: Date;
+    results: Array<{
+      parameter: string;
+      value: string;
+      normalRange: string;
+      interpretation: string;
+    }>;
+    labName: string;
+    technician: string;
+  };
+  
+  // For imaging reports
+  imaging?: {
+    type: 'xray' | 'mri' | 'ct' | 'ultrasound' | 'other';
+    bodyPart: string;
+    findings: string;
+    impression: string;
+    recommendations: string;
+  };
+  
+  attachments?: Array<{
+    name: string;
+    fileType: string;
+    url: string;
+    uploadDate: Date;
+  }>;
+  
+  status: 'draft' | 'final' | 'amended';
+  tags?: string[];
+}
+
 // @desc    Register new patient
 // @route   POST /api/patients/register
 // @access  Public
@@ -95,7 +149,7 @@ export const registerPatient = catchAsync(async (
       success: true,
       data: {
         patientId: patient._id,
-        token
+        patientToken: token
       },
       message: 'Patient registered successfully'
     });
@@ -127,9 +181,7 @@ export const getPatientById = catchAsync(async (req: Request, res: Response) => 
     const patient = await PatientModel.findById(id)
       .select('-username -password') // Exclude username and password
       .populate('doctors', 'name specialty')
-      .populate('medicalReports')
-      .populate('appointments')
-      .populate('prescriptions');
+  
 
     // Check if patient exists
     if (!patient) {
@@ -149,7 +201,7 @@ export const getPatientById = catchAsync(async (req: Request, res: Response) => 
     console.error('Error fetching patient:', error);
     res.status(500).json({
       success: false,
-      error: 'Error retrieving patient data'
+      error: 'Error fetching patient'
     });
   }
 });

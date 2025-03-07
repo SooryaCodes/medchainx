@@ -112,8 +112,8 @@ export default function PatientRegistration({ step, setStep }: Props) {
       const response = await axiosInstance.post<RegistrationResponse>('/patient/register', formattedData);
       
       if (response.data.success) {
-        const { token, patientId } = response.data.data;
-        setAuthCookies(token, patientId);
+        const { patientToken, patientId } = response.data.data;
+        setAuthCookies(patientToken, patientId);
         router.push('/patient/dashboard');
       }
     } catch (err: any) {
