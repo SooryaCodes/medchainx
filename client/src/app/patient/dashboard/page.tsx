@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Activity, 
   Heart, 
@@ -246,6 +246,8 @@ export default function PatientDashboard() {
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [isGeneratingToken, setIsGeneratingToken] = useState(false);
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
+  const [tokenExpiry, setTokenExpiry] = useState<Date | null>(null);
+  const [remainingTime, setRemainingTime] = useState<string>("");
 
   const handleRecordSelect = (record: MedicalRecord) => {
     setSelectedMedicalRecord(record);
@@ -260,9 +262,61 @@ export default function PatientDashboard() {
     // Simulate token generation
     setTimeout(() => {
       setIsGeneratingToken(false);
-      setGeneratedToken("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXRpZW50SWQiOiIxMjM0NTYiLCJleHBpcnkiOiIyMDI0LTA1LTMwVDIzOjU5OjU5WiJ9");
+      const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXRpZW50SWQiOiIxMjM0NTYiLCJleHBpcnkiOiIyMDI0LTA1LTMwVDIzOjU5OjU5WiJ9";
+      setGeneratedToken(token);
+      
+      // Set token expiry based on selected duration
+      const expirySelect = document.getElementById("token-validity") as HTMLSelectElement;
+      const expiryValue = expirySelect?.value || "1h";
+      const expiryTime = new Date();
+      
+      switch(expiryValue) {
+        case "30m": expiryTime.setMinutes(expiryTime.getMinutes() + 30); break;
+        case "45m": expiryTime.setMinutes(expiryTime.getMinutes() + 45); break;
+        case "1h": expiryTime.setHours(expiryTime.getHours() + 1); break;
+        case "2h": expiryTime.setHours(expiryTime.getHours() + 2); break;
+        case "4h": expiryTime.setHours(expiryTime.getHours() + 4); break;
+        case "8h": expiryTime.setHours(expiryTime.getHours() + 8); break;
+        case "24h": expiryTime.setHours(expiryTime.getHours() + 24); break;
+        default: expiryTime.setHours(expiryTime.getHours() + 1);
+      }
+      
+      setTokenExpiry(expiryTime);
+      
+      // Set cookie with token and expiry
+      document.cookie = `medToken=${token}; expires=${expiryTime.toUTCString()}; path=/; secure; samesite=strict`;
     }, 1500);
   };
+
+  // Update remaining time
+  useEffect(() => {
+    if (!tokenExpiry) return;
+    
+    const updateRemainingTime = () => {
+      const now = new Date();
+      const diff = tokenExpiry.getTime() - now.getTime();
+      
+      if (diff <= 0) {
+        setGeneratedToken(null);
+        setTokenExpiry(null);
+        setRemainingTime("");
+        return;
+      }
+      
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      
+      setRemainingTime(
+        `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+      );
+    };
+    
+    updateRemainingTime();
+    const interval = setInterval(updateRemainingTime, 1000);
+    
+    return () => clearInterval(interval);
+  }, [tokenExpiry]);
 
   const handleCopyToken = () => {
     if (generatedToken) {
@@ -291,36 +345,64 @@ export default function PatientDashboard() {
                 
                 <div className="mb-4">
                   <label className="block text-sm font-medium mb-2">Token Validity Period</label>
-                  <select className="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600">
-                    <option value="24h">24 hours</option>
-                    <option value="48h">48 hours</option>
-                    <option value="7d">7 days</option>
-                    <option value="30d">30 days</option>
+                  <select 
+                    id="token-validity"
+                    className="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="30m">30 minutes</option>
+                    <option value="45m">45 minutes</option>
+                    <option value="1h">1 hour</option>
+                    <option value="2h">2 hours</option>
+                    <option value="4h">4 hours</option>
+                    <option value="8h">8 hours</option>
+                    <option value="24h">24 hours (max)</option>
                   </select>
                 </div>
                 
-                <div className="mb-6">
-                  <label className="block text-sm font-medium mb-2">Data to Share</label>
-                  <div className="space-y-2">
+                <div className="mb-6 bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800">
+                  <h4 className="font-medium text-blue-800 dark:text-blue-300 mb-2">Data to Share</h4>
+                  <div className="space-y-3">
                     <div className="flex items-center">
-                      <input type="checkbox" id="share-vitals" className="mr-2" defaultChecked />
-                      <label htmlFor="share-vitals">Vital Signs</label>
+                      <input type="checkbox" id="share-vitals" className="mr-2 h-4 w-4 rounded text-blue-600 focus:ring-blue-500" defaultChecked />
+                      <label htmlFor="share-vitals" className="text-sm">Vital Signs (heart rate, blood pressure, etc.)</label>
                     </div>
                     <div className="flex items-center">
-                      <input type="checkbox" id="share-medications" className="mr-2" defaultChecked />
-                      <label htmlFor="share-medications">Medications</label>
+                      <input type="checkbox" id="share-medications" className="mr-2 h-4 w-4 rounded text-blue-600 focus:ring-blue-500" defaultChecked />
+                      <label htmlFor="share-medications" className="text-sm">Current Medications & Adherence</label>
                     </div>
                     <div className="flex items-center">
-                      <input type="checkbox" id="share-history" className="mr-2" defaultChecked />
-                      <label htmlFor="share-history">Medical History</label>
+                      <input type="checkbox" id="share-history" className="mr-2 h-4 w-4 rounded text-blue-600 focus:ring-blue-500" defaultChecked />
+                      <label htmlFor="share-history" className="text-sm">Medical History Records</label>
                     </div>
                     <div className="flex items-center">
-                      <input type="checkbox" id="share-lab" className="mr-2" defaultChecked />
-                      <label htmlFor="share-lab">Lab Results</label>
+                      <input type="checkbox" id="share-lab" className="mr-2 h-4 w-4 rounded text-blue-600 focus:ring-blue-500" defaultChecked />
+                      <label htmlFor="share-lab" className="text-sm">Lab Results & Diagnostic Tests</label>
                     </div>
                     <div className="flex items-center">
-                      <input type="checkbox" id="share-risk" className="mr-2" />
-                      <label htmlFor="share-risk">Risk Assessments</label>
+                      <input type="checkbox" id="share-risk" className="mr-2 h-4 w-4 rounded text-blue-600 focus:ring-blue-500" />
+                      <label htmlFor="share-risk" className="text-sm">Risk Assessments & Predictions</label>
+                    </div>
+                    
+                    <div className="pt-2 border-t border-blue-100 dark:border-blue-800">
+                      <h5 className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-2">Specific Conditions</h5>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="flex items-center">
+                          <input type="checkbox" id="share-cardiac" className="mr-2 h-4 w-4 rounded text-blue-600 focus:ring-blue-500" />
+                          <label htmlFor="share-cardiac" className="text-sm">Cardiac</label>
+                        </div>
+                        <div className="flex items-center">
+                          <input type="checkbox" id="share-diabetes" className="mr-2 h-4 w-4 rounded text-blue-600 focus:ring-blue-500" />
+                          <label htmlFor="share-diabetes" className="text-sm">Diabetes</label>
+                        </div>
+                        <div className="flex items-center">
+                          <input type="checkbox" id="share-respiratory" className="mr-2 h-4 w-4 rounded text-blue-600 focus:ring-blue-500" />
+                          <label htmlFor="share-respiratory" className="text-sm">Respiratory</label>
+                        </div>
+                        <div className="flex items-center">
+                          <input type="checkbox" id="share-allergies" className="mr-2 h-4 w-4 rounded text-blue-600 focus:ring-blue-500" />
+                          <label htmlFor="share-allergies" className="text-sm">Allergies</label>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -332,7 +414,7 @@ export default function PatientDashboard() {
                   <Button 
                     onClick={handleGenerateToken} 
                     disabled={isGeneratingToken}
-                    className="relative"
+                    className="relative bg-blue-600 hover:bg-blue-700"
                   >
                     {isGeneratingToken ? (
                       <div className="flex items-center">
@@ -362,7 +444,9 @@ export default function PatientDashboard() {
                 </p>
                 
                 <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-md mb-4 relative">
-                  <p className="text-sm font-mono break-all">{generatedToken}</p>
+                  <p className="text-sm font-mono break-all">
+                    {generatedToken.substring(0, 10)}...{generatedToken.substring(generatedToken.length - 10)}
+                  </p>
                   <button 
                     onClick={handleCopyToken}
                     className="absolute top-2 right-2 p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600"
@@ -374,22 +458,80 @@ export default function PatientDashboard() {
                   </button>
                 </div>
                 
+                {/* Token Expiry Countdown */}
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Token expires in:</span>
+                    <span className="text-sm font-medium text-red-600 dark:text-red-400">{remainingTime}</span>
+                  </div>
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mb-1">
+                    {tokenExpiry && (
+                      <div 
+                        className="bg-gradient-to-r from-red-500 to-amber-500 h-2.5 rounded-full transition-all duration-1000"
+                        style={{ 
+                          width: `${tokenExpiry ? 
+                            Math.max(0, (tokenExpiry.getTime() - Date.now()) / 
+                            (tokenExpiry.getTime() - (tokenExpiry.getTime() - (
+                              tokenExpiry.getTime() - new Date().getTime() + 1000 * 60 * 60 * 24
+                            ))) * 100) : 0}%` 
+                        }}
+                      ></div>
+                    )}
+                  </div>
+                </div>
+                
                 <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md mb-6">
                   <p className="text-sm text-blue-800 dark:text-blue-300">
                     <span className="font-medium">Important:</span> This token grants temporary access to your medical data. Do not share it with unauthorized individuals.
                   </p>
                 </div>
                 
-                <div className="flex justify-end">
-                  <Button onClick={() => {
+                <div className="flex justify-end gap-3">
+                  <Button variant="outline" onClick={() => {
                     setShowTokenModal(false);
                     setGeneratedToken(null);
+                    setTokenExpiry(null);
                   }}>
                     Close
+                  </Button>
+                  <Button 
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    onClick={handleCopyToken}
+                  >
+                    Copy Token
                   </Button>
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+      
+      {/* Active Token Indicator */}
+      {generatedToken && tokenExpiry && (
+        <div className="fixed bottom-4 right-4 z-40">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 border border-gray-200 dark:border-gray-700 max-w-xs">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center">
+                <div className="w-3 h-3 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+                <h4 className="font-medium text-sm">Active Token</h4>
+              </div>
+              <span className="text-xs font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                {remainingTime}
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+              <div 
+                className="bg-gradient-to-r from-green-500 to-blue-500 h-1.5 rounded-full transition-all duration-1000"
+                style={{ 
+                  width: `${tokenExpiry ? 
+                    Math.max(0, (tokenExpiry.getTime() - Date.now()) / 
+                    (tokenExpiry.getTime() - (tokenExpiry.getTime() - (
+                      tokenExpiry.getTime() - new Date().getTime() + 1000 * 60 * 60 * 24
+                    ))) * 100) : 0}%` 
+                }}
+              ></div>
+            </div>
           </div>
         </div>
       )}
