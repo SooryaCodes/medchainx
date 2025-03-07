@@ -36,7 +36,7 @@ import { useRouter } from "next/navigation";
 
 import { PatientProfile } from "@/components/features/patient/PatientProfile";
 // Define interface for medical record
-interface MedicalRecord {
+interface DashboardMedicalRecord {
   id: string;
   date: string;
   type: string;
@@ -66,6 +66,8 @@ interface MedicalRecord {
     url: string;
   }>;
   followUp: string;
+  status: string;
+  tags: string[];
 }
 
 // Mock data for health metrics
@@ -81,6 +83,7 @@ const healthMetrics = {
   cholesterol: { current: 180, min: 125, max: 200, trend: "stable" }
 };
 
+// Use the existing mock data for now
 const medicalHistory = [
   { 
     id: "rec1",
@@ -104,7 +107,9 @@ const medicalHistory = [
     attachments: [
       { name: "Physical Exam Report", type: "PDF", url: "/reports/physical-exam.pdf" }
     ],
-    followUp: "6 months" 
+    followUp: "6 months",
+    status: "final",
+    tags: ["checkup", "annual"]
   },
   { 
     id: "rec2",
@@ -123,7 +128,9 @@ const medicalHistory = [
     attachments: [
       { name: "Vaccination Record", type: "PDF", url: "/reports/vaccination.pdf" }
     ],
-    followUp: "1 year" 
+    followUp: "1 year",
+    status: "final",
+    tags: ["vaccination", "preventive"]
   },
   { 
     id: "rec3",
@@ -148,58 +155,9 @@ const medicalHistory = [
       { name: "ECG Report", type: "PDF", url: "/reports/ecg.pdf" },
       { name: "Cardiology Notes", type: "PDF", url: "/reports/cardiology-notes.pdf" }
     ],
-    followUp: "3 months" 
-  },
-  { 
-    id: "rec4",
-    date: "2023-05-10", 
-    type: "Emergency", 
-    description: "Acute bronchitis", 
-    doctor: {
-      name: "Dr. Brown",
-      specialty: "Emergency Medicine",
-      hospital: "City Medical Center",
-      contact: "brown@medical.com"
-    }, 
-    notes: "Prescribed antibiotics for 7 days",
-    prescriptions: [
-      { name: "Amoxicillin", dosage: "500mg", frequency: "Three times daily", duration: "7 days" },
-      { name: "Guaifenesin", dosage: "400mg", frequency: "Every 4 hours as needed", duration: "7 days" }
-    ],
-    labResults: [
-      { name: "Chest X-ray", result: "Bronchial inflammation", referenceRange: "Normal", date: "2023-05-10" }
-    ],
-    attachments: [
-      { name: "X-ray Image", type: "DICOM", url: "/reports/xray.dcm" },
-      { name: "Emergency Report", type: "PDF", url: "/reports/emergency.pdf" }
-    ],
-    followUp: "2 weeks" 
-  },
-  { 
-    id: "rec5",
-    date: "2023-02-18", 
-    type: "Surgery", 
-    description: "Appendectomy", 
-    doctor: {
-      name: "Dr. Davis",
-      specialty: "Surgery",
-      hospital: "City Medical Center",
-      contact: "davis@medical.com"
-    }, 
-    notes: "Successful procedure, follow-up in 2 weeks",
-    prescriptions: [
-      { name: "Hydrocodone/Acetaminophen", dosage: "5/325mg", frequency: "Every 6 hours as needed", duration: "5 days" },
-      { name: "Docusate Sodium", dosage: "100mg", frequency: "Twice daily", duration: "7 days" }
-    ],
-    labResults: [
-      { name: "Pre-op Blood Work", result: "Normal", referenceRange: "Standard", date: "2023-02-17" },
-      { name: "Pathology Report", result: "Acute appendicitis", referenceRange: "N/A", date: "2023-02-20" }
-    ],
-    attachments: [
-      { name: "Surgical Report", type: "PDF", url: "/reports/surgery.pdf" },
-      { name: "Discharge Instructions", type: "PDF", url: "/reports/discharge.pdf" }
-    ],
-    followUp: "2 weeks" 
+    followUp: "6 months",
+    status: "final",
+    tags: ["cardiology", "heart"]
   }
 ];
 
@@ -249,7 +207,7 @@ export default function PatientDashboard() {
   const router = useRouter();
   
   const [activeTab, setActiveTab] = useState("overview");
-  const [selectedMedicalRecord, setSelectedMedicalRecord] = useState<MedicalRecord | null>(null);
+  const [selectedMedicalRecord, setSelectedMedicalRecord] = useState<DashboardMedicalRecord | null>(null);
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [isGeneratingToken, setIsGeneratingToken] = useState(false);
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
@@ -258,8 +216,58 @@ export default function PatientDashboard() {
   const [originalDuration, setOriginalDuration] = useState<number>(60 * 60 * 1000); // Default 1h
   const [formattedTime, setFormattedTime] = useState<string | null>(null);
   const [showProfile, setShowProfile] = useState(false);
+  const [patientMedicalRecords, setPatientMedicalRecords] = useState<DashboardMedicalRecord[]>([]);
 
-  const handleRecordSelect = (record: MedicalRecord) => {
+  // Transform MongoDB medical reports to DashboardMedicalRecord format when patient data is loaded
+  useEffect(() => {
+    if (patient && patient.medicalReports && patient.medicalReports.length > 0) {
+      const transformedRecords = patient.medicalReports.map((report: any) => {
+        return {
+          id: report._id.$oid || report._id || `report-${Math.random().toString(36).substr(2, 9)}`,
+          date: new Date(report.date.$date || report.date).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          }),
+          type: report.type || (report.title ? report.title.split(' ')[0] : 'General'),
+          description: report.title,
+          doctor: {
+            name: report.doctor?.name || 'Unknown Doctor',
+            specialty: report.doctor?.specialty || 'General Practice',
+            hospital: report.doctor?.hospital?.name || 'Unknown Hospital',
+            contact: report.doctor?.hospital?.address || 'No contact information'
+          },
+          notes: report.content || report.additionalNotes || '',
+          prescriptions: report.prescription?.medications?.map((med: any) => ({
+            name: med.name,
+            dosage: med.dosage,
+            frequency: med.frequency,
+            duration: med.startDate && med.endDate ? 
+              `${new Date(med.startDate.$date || med.startDate).toLocaleDateString()} - ${new Date(med.endDate.$date || med.endDate).toLocaleDateString()}` : 
+              "As prescribed"
+          })) || [],
+          labResults: report.labReport?.results?.map((result: any) => ({
+            name: result.parameter,
+            result: result.value,
+            referenceRange: result.normalRange,
+            date: report.labReport.testDate ? new Date(report.labReport.testDate.$date || report.labReport.testDate).toLocaleDateString() : 
+              new Date(report.date.$date || report.date).toLocaleDateString(),
+            interpretation: result.interpretation
+          })) || [],
+          attachments: [],  // You can populate this if you have attachments in your data
+          followUp: report.additionalNotes || "As recommended",
+          status: report.status || 'final',
+          tags: report.tags || []
+        };
+      });
+      setPatientMedicalRecords(transformedRecords);
+    } else {
+      // Use mock data if no patient data is available
+      setPatientMedicalRecords(medicalHistory as DashboardMedicalRecord[]);
+    }
+  }, [patient]);
+
+  const handleRecordSelect = (record: DashboardMedicalRecord) => {
     setSelectedMedicalRecord(record);
   };
 
@@ -1012,7 +1020,7 @@ export default function PatientDashboard() {
                 />
               ) : (
                 <MedicalHistoryList 
-                  records={medicalHistory} 
+                  records={patientMedicalRecords} 
                   onSelectRecord={handleRecordSelect} 
                 />
               )
