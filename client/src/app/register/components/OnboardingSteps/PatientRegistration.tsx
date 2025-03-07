@@ -244,4 +244,4 @@ export default function PatientRegistration({ step, setStep }: PatientRegistrati
       </CardContent>
     </Card>
   );
-} 
+}
