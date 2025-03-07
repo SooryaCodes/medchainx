@@ -264,12 +264,16 @@ export default function DoctorRegistration({ step, setStep }: DoctorRegistration
         <div className="space-y-2 md:col-span-2">
           <Label htmlFor="hospital_id">Hospital Affiliation</Label>
           <Select onValueChange={(value) => handleSelectChange("hospital_id", value)}>
-            <SelectTrigger className="border-blue-200">
+            <SelectTrigger className="border-blue-200 bg-white dark:bg-gray-800">
               <SelectValue placeholder="Select hospital" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white dark:bg-gray-800">
               {hospitals.map((hospital) => (
-                <SelectItem key={hospital.id} value={hospital.id}>
+                <SelectItem 
+                  key={hospital.id} 
+                  value={hospital.id}
+                  className="hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                >
                   {hospital.name}
                 </SelectItem>
               ))}

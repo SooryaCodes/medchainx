@@ -55,10 +55,39 @@ export default function PatientRegistration({ step, setStep }: Props) {
   const {
     register,
     handleSubmit,
+    trigger,
     formState: { errors },
+    watch,
   } = useForm<PatientRegistrationData>({
     resolver: zodResolver(patientSchema),
+    mode: 'onChange',
   });
+
+  const validateStep1 = async () => {
+    const result = await trigger([
+      'username',
+      'password',
+      'firstName',
+      'lastName',
+      'email',
+      'nationalId',
+    ]);
+    if (result) {
+      setStep(2);
+    }
+  };
+
+  const validateStep2 = async () => {
+    const result = await trigger([
+      'dateOfBirth',
+      'gender',
+      'bloodType',
+      'healthInsuranceId',
+    ]);
+    if (result) {
+      setStep(3);
+    }
+  };
 
   const onSubmit = async (data: PatientRegistrationData) => {
     try {
@@ -179,6 +208,15 @@ export default function PatientRegistration({ step, setStep }: Props) {
           )}
         </div>
       </div>
+      <div className="flex justify-end mt-6">
+        <Button
+          type="button"
+          onClick={validateStep1}
+          className="bg-blue-600 hover:bg-blue-700"
+        >
+          Next Step
+        </Button>
+      </div>
     </div>
   );
 
@@ -205,13 +243,13 @@ export default function PatientRegistration({ step, setStep }: Props) {
         <div className="space-y-2">
           <Label htmlFor="gender">Gender</Label>
           <Select onValueChange={(value) => register('gender').onChange({ target: { value } })}>
-            <SelectTrigger className="border-blue-200">
+            <SelectTrigger className="border-blue-200 bg-white dark:bg-gray-800">
               <SelectValue placeholder="Select gender" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="male">Male</SelectItem>
-              <SelectItem value="female">Female</SelectItem>
-              <SelectItem value="other">Other</SelectItem>
+            <SelectContent className="bg-white dark:bg-gray-800">
+              <SelectItem value="male" className="hover:bg-blue-50 dark:hover:bg-blue-900/30">Male</SelectItem>
+              <SelectItem value="female" className="hover:bg-blue-50 dark:hover:bg-blue-900/30">Female</SelectItem>
+              <SelectItem value="other" className="hover:bg-blue-50 dark:hover:bg-blue-900/30">Other</SelectItem>
             </SelectContent>
           </Select>
           {errors.gender && (
@@ -222,12 +260,18 @@ export default function PatientRegistration({ step, setStep }: Props) {
         <div className="space-y-2">
           <Label htmlFor="bloodType">Blood Type</Label>
           <Select onValueChange={(value) => register('bloodType').onChange({ target: { value } })}>
-            <SelectTrigger className="border-blue-200">
+            <SelectTrigger className="border-blue-200 bg-white dark:bg-gray-800">
               <SelectValue placeholder="Select blood type" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white dark:bg-gray-800">
               {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((type) => (
-                <SelectItem key={type} value={type}>{type}</SelectItem>
+                <SelectItem 
+                  key={type} 
+                  value={type}
+                  className="hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                >
+                  {type}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -247,6 +291,23 @@ export default function PatientRegistration({ step, setStep }: Props) {
             <p className="text-red-500 text-sm mt-1">{errors.healthInsuranceId.message}</p>
           )}
         </div>
+      </div>
+      <div className="flex justify-between mt-6">
+        <Button
+          type="button"
+          onClick={() => setStep(1)}
+          variant="outline"
+          className="border-blue-600 text-blue-600"
+        >
+          Previous Step
+        </Button>
+        <Button
+          type="button"
+          onClick={validateStep2}
+          className="bg-blue-600 hover:bg-blue-700"
+        >
+          Next Step
+        </Button>
       </div>
     </div>
   );
@@ -375,6 +436,23 @@ export default function PatientRegistration({ step, setStep }: Props) {
             )}
           </div>
         </div>
+      </div>
+      <div className="flex justify-between mt-6">
+        <Button
+          type="button"
+          onClick={() => setStep(2)}
+          variant="outline"
+          className="border-blue-600 text-blue-600"
+        >
+          Previous Step
+        </Button>
+        <Button
+          type="submit"
+          disabled={isLoading}
+          className="bg-blue-600 hover:bg-blue-700"
+        >
+          {isLoading ? 'Registering...' : 'Complete Registration'}
+        </Button>
       </div>
     </div>
   );
