@@ -1,24 +1,27 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 
 const UserDashboard = () => {
   const [activeTab, setActiveTab] = useState("labResults");
+  const [patientData, setPatientData] = useState(null);
 
-  const fakeUserData = {
-    medicalTimeline: [
-      { date: "2024-03-01", event: "Routine Checkup" },
-      { date: "2024-02-20", event: "Blood Test" },
-      { date: "2024-01-15", event: "X-Ray Scan" },
-    ],
-    healthMetrics: { heartRate: 72, bloodPressure: "120/80", weight: "70kg" },
-    medicalRecords: {
-      labResults: "Blood test results: Normal.",
-      diagnosis: "Mild hypertension detected.",
-      treatment: "Prescribed lifestyle changes and monitoring.",
-    },
-    upcomingAppointments: [{ date: "2024-03-10", doctor: "Dr. Smith, Cardiologist" }],
-  };
+  useEffect(() => {
+    const fetchPatientData = async () => {
+      try {
+        const response = await fetch("http://localhost:3000/api/patient/get-patient-by-name/John Doe"); // Replace with dynamic name if needed
+        if (!response.ok) throw new Error("Failed to fetch patient data");
+        const data = await response.json();
+        setPatientData(data.patientRecord);
+      } catch (error) {
+        console.error("Error fetching patient data:", error);
+      }
+    };
+
+    fetchPatientData();
+  }, []);
+
+  if (!patientData) return <p>Loading patient data...</p>;
 
   return (
     <div className="p-6">
@@ -29,8 +32,8 @@ const UserDashboard = () => {
         <CardContent>
           <h2 className="text-xl font-semibold mb-2">Medical Timeline</h2>
           <ul className="list-disc ml-4">
-            {fakeUserData.medicalTimeline.map((event, index) => (
-              <li key={index}>{event.date} - {event.event}</li>
+            {patientData.medicalHistory.map((event, index) => (
+              <li key={index}>{event.diagnosedOn} - {event.condition}</li>
             ))}
           </ul>
         </CardContent>
@@ -40,9 +43,9 @@ const UserDashboard = () => {
       <Card className="mt-4">
         <CardContent>
           <h2 className="text-xl font-semibold mb-2">Health Metrics</h2>
-          <p>Heart Rate: {fakeUserData.healthMetrics.heartRate} bpm</p>
-          <p>Blood Pressure: {fakeUserData.healthMetrics.bloodPressure}</p>
-          <p>Weight: {fakeUserData.healthMetrics.weight}</p>
+          <p>Heart Rate: {patientData.healthMetrics?.heartRate} bpm</p>
+          <p>Blood Pressure: {patientData.healthMetrics?.bloodPressure}</p>
+          <p>Weight: {patientData.healthMetrics?.weight}</p>
         </CardContent>
       </Card>
 
@@ -55,7 +58,7 @@ const UserDashboard = () => {
             <Button onClick={() => setActiveTab("diagnosis")}>Diagnosis</Button>
             <Button onClick={() => setActiveTab("treatment")}>Treatment</Button>
           </div>
-          <p>{fakeUserData.medicalRecords[activeTab]}</p>
+          <p>{patientData.medicalRecords?.[activeTab]}</p>
         </CardContent>
       </Card>
 
@@ -64,7 +67,7 @@ const UserDashboard = () => {
         <CardContent>
           <h2 className="text-xl font-semibold mb-2">Upcoming Appointments</h2>
           <ul className="list-disc ml-4">
-            {fakeUserData.upcomingAppointments.map((appointment, index) => (
+            {patientData.upcomingAppointments?.map((appointment, index) => (
               <li key={index}>{appointment.date} - {appointment.doctor}</li>
             ))}
           </ul>
