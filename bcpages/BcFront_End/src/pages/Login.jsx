@@ -1,8 +1,7 @@
-// src/pages/Login.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-const Login = () => {
+const Login = ({ onClose }) => {
     const [role, setRole] = useState("patient");
     const navigate = useNavigate();
 
@@ -14,9 +13,26 @@ const Login = () => {
         }
     };
 
+    // Closes modal when clicking outside
+    const handleOverlayClick = (e) => {
+        if (e.target.id === "login-modal") onClose();
+    };
+
     return (
-        <div className="flex flex-col items-center justify-center h-screen bg-gray-100">
-            <div className="p-6 bg-white rounded shadow-md w-80">
+        <div 
+            id="login-modal"
+            className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 transition-opacity duration-300"
+            onClick={handleOverlayClick}
+        >
+            <div className="p-6 bg-white rounded shadow-md w-80 relative animate-fade-in">
+                {/* Close button */}
+                <button 
+                    className="absolute top-2 right-2 text-gray-600 hover:text-gray-900"
+                    onClick={onClose}
+                >
+                    ✕
+                </button>
+                
                 <h2 className="text-xl font-semibold mb-4">Enter</h2>
                 <select 
                     className="w-full p-2 border rounded mb-4"
