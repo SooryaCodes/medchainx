@@ -1,61 +1,83 @@
-# Project Name
+# MedChainX - Cloud-Based EMR System  
 
-## 🚀 Project Description
-A concise, engaging description of your hackathon project.
+## 🚀 Project Description  
+MedChainX is a modern cloud-based Electronic Medical Records (EMR) system designed for efficient and secure patient data management. Our team is building two separate applications:  
 
-## 🎯 Link to Project
-[live link of project](live_link)
+1. **Cloud-Based EMR System (This Project):**  
+   - A web-based platform for hospitals and clinics to manage patient records seamlessly.  
+   - Built using **MongoDB Atlas, Next.js, and Express.js** for a scalable and efficient solution.  
 
-## 🛠 Tech Stack
-- List the primary technologies used
-- Include programming languages, frameworks, and key libraries
+2. **Blockchain-Integrated Medical App (Parallel Project):**  
+   - A separate application leveraging blockchain for **enhanced security and transparency** in medical records.  
+   - Ensures **tamper-proof patient data** and **decentralized access** for better interoperability.  
 
-## 📦 Prerequisites
-- List all required software and versions
-- Include installation instructions
-- Example:
-  ```
-  - Node.js (v14+)
-  - npm (v6+)
-  - Python (v3.8+)
-  ```
+## 🎯 Link to Project  
+[Live Demo](live_link)  
 
-## 🔧 Installation & Setup
+## 🛠 Tech Stack  
+- **Frontend:** Next.js, TypeScript, Tailwind CSS  
+- **Backend:** Express.js, Node.js  
+- **Database:** MongoDB Atlas  
+- **Authentication:** JWT  
+- **Hosting:** Vercel (Frontend), Render (Backend)  
 
-1. Install dependencies
-   ```bash
-   # Frontend
-   cd frontend
-   npm install
+## 📦 Prerequisites  
+Ensure you have the following installed:  
+```bash
+- Node.js (v16+)  
+- npm (v8+)  
+- MongoDB Atlas Account  
+```
 
-   # Backend
-   cd ../backend
-   pip install -r requirements.txt
-   ```
+## 🔧 Installation & Setup  
 
-2. Configure Environment Variables
-   
-   - Create a `.env` file
-   - Add necessary configuration details
-     
-   ```
-   API_KEY=your_api_key
-   DATABASE_URL=your_database_connection_string
-   ```
+### 1️⃣ Clone the Repository  
+```bash
+git clone https://github.com/your-repo-url.git
+cd your-repo-url
+```
 
-4. Run the Application
-   ```bash
-   # Start frontend
-   npm start
+### 2️⃣ Setup Backend  
+```bash
+cd backend
+npm install
+```
 
-   # Start backend
-   python app.py
-   ```
+### 3️⃣ Setup Frontend  
+```bash
+cd ../frontend
+npm install
+```
 
-## Team Members
-  [1.Team Member 1](enter_github_id_here)   
-  [2.Team Member 2](enter_github_id_here)   
-  [3.Team Member 3](enter_github_id_here)   
-  [4.Team Member 4](enter_github_id_here)  
+### 4️⃣ Configure Environment Variables  
+Create a `.env` file in the backend folder with the following:  
+```bash
+DATABASE_URL=your_mongodb_connection_string  
+JWT_SECRET=your_secret_key  
+```
 
-**Made with ❤️ at Beachhack 6**
+### 5️⃣ Run the Application  
+```bash
+# Start Backend
+cd backend
+npm start  
+
+# Start Frontend
+cd ../frontend
+npm run dev  
+```
+
+## 💡 Features  
+✅ Secure **Patient Record Management**  
+✅ Role-Based **Access Control** (Doctors, Admin, Patients)  
+✅ Real-Time **Data Sync with Cloud Storage**  
+✅ **User-Friendly Dashboard** for Clinics & Hospitals  
+
+## 👥 Team Members  
+- [Soorya Krishna P R](github_profile)  
+- [Sreemadhav](github_profile)  
+- [Sreeram R](github_profile)  
+- [Jyothis Mariya Joy](github_profile)  
+
+**Developed at BeachHack 6 🚀**  
+```
