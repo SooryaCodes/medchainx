@@ -17,35 +17,79 @@ export default function PatientRegistration({ step, setStep }: PatientRegistrati
     password: "",
     confirm_password: "",
     
-    // Personal Info
-    first_name: "",
-    last_name: "",
-    date_of_birth: "",
+    // Personal Info (matches schema)
+    name: {
+      given: [""], // First name will be stored here
+      family: "",  // Last name
+    },
+    birthDate: "",
     gender: "",
-    blood_type: "",
-    contact_number: "",
-    email: "",
     
-    // Address
-    street: "",
-    city: "",
-    state: "",
-    zip_code: "",
-    country: "",
+    // Contact Info
+    contact: {
+      phone: "",
+      email: "",
+    },
     
-    // Identification
-    national_id: "",
-    health_insurance_id: "",
+    // Address (will be stored in user profile)
+    address: {
+      street: "",
+      city: "",
+      state: "",
+      postalCode: "",
+      country: "",
+    },
     
     // Emergency Contact
-    emergency_name: "",
-    emergency_relation: "",
-    emergency_contact: "",
+    emergencyContact: {
+      name: "",
+      phone: "",
+      relationship: "", // Additional field for relationship
+    },
+    
+    // Additional fields for registration
+    bloodType: "",
+    healthInsuranceId: "",
+    nationalId: "",
   });
+
+  type FormDataKeys = keyof typeof formData;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Handle nested fields
+    if (name.includes('.')) {
+      const [parent, child] = name.split('.');
+      setFormData(prev => {
+        // Create a safe copy with proper typing
+        const parentObj = (prev[parent as FormDataKeys] && 
+                           typeof prev[parent as FormDataKeys] === 'object' && 
+                           prev[parent as FormDataKeys] !== null) 
+                           ? {...prev[parent as FormDataKeys] as Record<string, any>} 
+                           : {};
+        
+        return {
+          ...prev,
+          [parent as FormDataKeys]: {
+            ...parentObj,
+            [child]: value
+          }
+        };
+      });
+    } else {
+      setFormData(prev => ({ ...prev, [name as FormDataKeys]: value }));
+    }
+  };
+
+  const handleGivenNameChange = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      name: {
+        ...prev.name,
+        given: [value]
+      }
+    }));
   };
 
   const handleSelectChange = (name: string, value: string) => {
@@ -91,34 +135,34 @@ export default function PatientRegistration({ step, setStep }: PatientRegistrati
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="first_name">First Name</Label>
+          <Label htmlFor="given_name">First Name</Label>
           <Input 
-            id="first_name" 
-            name="first_name" 
-            value={formData.first_name} 
-            onChange={handleChange} 
+            id="given_name" 
+            name="given_name" 
+            value={formData.name.given[0]} 
+            onChange={(e) => handleGivenNameChange(e.target.value)} 
             placeholder="Enter your first name"
             className="border-blue-200 focus:border-blue-400"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="last_name">Last Name</Label>
+          <Label htmlFor="family">Last Name</Label>
           <Input 
-            id="last_name" 
-            name="last_name" 
-            value={formData.last_name} 
+            id="family" 
+            name="name.family" 
+            value={formData.name.family} 
             onChange={handleChange} 
             placeholder="Enter your last name"
             className="border-blue-200 focus:border-blue-400"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="date_of_birth">Date of Birth</Label>
+          <Label htmlFor="birthDate">Date of Birth</Label>
           <Input 
-            id="date_of_birth" 
-            name="date_of_birth" 
+            id="birthDate" 
+            name="birthDate" 
             type="date" 
-            value={formData.date_of_birth} 
+            value={formData.birthDate} 
             onChange={handleChange}
             className="border-blue-200 focus:border-blue-400"
           />
@@ -130,9 +174,9 @@ export default function PatientRegistration({ step, setStep }: PatientRegistrati
               <SelectValue placeholder="Select gender" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Male">Male</SelectItem>
-              <SelectItem value="Female">Female</SelectItem>
-              <SelectItem value="Other">Other</SelectItem>
+              <SelectItem value="male">Male</SelectItem>
+              <SelectItem value="female">Female</SelectItem>
+              <SelectItem value="other">Other</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -147,20 +191,20 @@ export default function PatientRegistration({ step, setStep }: PatientRegistrati
           <Label htmlFor="email">Email Address</Label>
           <Input 
             id="email" 
-            name="email" 
+            name="contact.email" 
             type="email" 
-            value={formData.email} 
+            value={formData.contact.email} 
             onChange={handleChange} 
             placeholder="Enter your email"
             className="border-blue-200 focus:border-blue-400"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="contact_number">Phone Number</Label>
+          <Label htmlFor="phone">Phone Number</Label>
           <Input 
-            id="contact_number" 
-            name="contact_number" 
-            value={formData.contact_number} 
+            id="phone" 
+            name="contact.phone" 
+            value={formData.contact.phone} 
             onChange={handleChange} 
             placeholder="Enter your phone number"
             className="border-blue-200 focus:border-blue-400"
@@ -170,8 +214,8 @@ export default function PatientRegistration({ step, setStep }: PatientRegistrati
           <Label htmlFor="street">Street Address</Label>
           <Textarea 
             id="street" 
-            name="street" 
-            value={formData.street} 
+            name="address.street" 
+            value={formData.address.street} 
             onChange={handleChange} 
             placeholder="Enter your street address"
             className="border-blue-200 focus:border-blue-400"
@@ -181,8 +225,8 @@ export default function PatientRegistration({ step, setStep }: PatientRegistrati
           <Label htmlFor="city">City</Label>
           <Input 
             id="city" 
-            name="city" 
-            value={formData.city} 
+            name="address.city" 
+            value={formData.address.city} 
             onChange={handleChange} 
             placeholder="Enter your city"
             className="border-blue-200 focus:border-blue-400"
@@ -192,19 +236,19 @@ export default function PatientRegistration({ step, setStep }: PatientRegistrati
           <Label htmlFor="state">State/Province</Label>
           <Input 
             id="state" 
-            name="state" 
-            value={formData.state} 
+            name="address.state" 
+            value={formData.address.state} 
             onChange={handleChange} 
             placeholder="Enter your state"
             className="border-blue-200 focus:border-blue-400"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="zip_code">ZIP Code</Label>
+          <Label htmlFor="postalCode">ZIP/Postal Code</Label>
           <Input 
-            id="zip_code" 
-            name="zip_code" 
-            value={formData.zip_code} 
+            id="postalCode" 
+            name="address.postalCode" 
+            value={formData.address.postalCode} 
             onChange={handleChange} 
             placeholder="Enter your ZIP code"
             className="border-blue-200 focus:border-blue-400"
@@ -214,8 +258,8 @@ export default function PatientRegistration({ step, setStep }: PatientRegistrati
           <Label htmlFor="country">Country</Label>
           <Input 
             id="country" 
-            name="country" 
-            value={formData.country} 
+            name="address.country" 
+            value={formData.address.country} 
             onChange={handleChange} 
             placeholder="Enter your country"
             className="border-blue-200 focus:border-blue-400"
@@ -229,8 +273,8 @@ export default function PatientRegistration({ step, setStep }: PatientRegistrati
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
-          <Label htmlFor="blood_type">Blood Type</Label>
-          <Select onValueChange={(value) => handleSelectChange("blood_type", value)}>
+          <Label htmlFor="bloodType">Blood Type</Label>
+          <Select onValueChange={(value) => handleSelectChange("bloodType", value)}>
             <SelectTrigger className="border-blue-200">
               <SelectValue placeholder="Select blood type" />
             </SelectTrigger>
@@ -247,55 +291,55 @@ export default function PatientRegistration({ step, setStep }: PatientRegistrati
           </Select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="health_insurance_id">Health Insurance ID</Label>
+          <Label htmlFor="healthInsuranceId">Health Insurance ID</Label>
           <Input 
-            id="health_insurance_id" 
-            name="health_insurance_id" 
-            value={formData.health_insurance_id} 
+            id="healthInsuranceId" 
+            name="healthInsuranceId" 
+            value={formData.healthInsuranceId} 
             onChange={handleChange} 
             placeholder="Enter your insurance ID"
             className="border-blue-200 focus:border-blue-400"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="national_id">National ID</Label>
+          <Label htmlFor="nationalId">National ID</Label>
           <Input 
-            id="national_id" 
-            name="national_id" 
-            value={formData.national_id} 
+            id="nationalId" 
+            name="nationalId" 
+            value={formData.nationalId} 
             onChange={handleChange} 
             placeholder="Enter your national ID"
             className="border-blue-200 focus:border-blue-400"
           />
         </div>
         <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="emergency_name">Emergency Contact Name</Label>
+          <Label htmlFor="emergencyName">Emergency Contact Name</Label>
           <Input 
-            id="emergency_name" 
-            name="emergency_name" 
-            value={formData.emergency_name} 
+            id="emergencyName" 
+            name="emergencyContact.name" 
+            value={formData.emergencyContact.name} 
             onChange={handleChange} 
             placeholder="Enter emergency contact name"
             className="border-blue-200 focus:border-blue-400"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="emergency_relation">Relationship</Label>
+          <Label htmlFor="emergencyRelationship">Relationship</Label>
           <Input 
-            id="emergency_relation" 
-            name="emergency_relation" 
-            value={formData.emergency_relation} 
+            id="emergencyRelationship" 
+            name="emergencyContact.relationship" 
+            value={formData.emergencyContact.relationship} 
             onChange={handleChange} 
             placeholder="Enter relationship"
             className="border-blue-200 focus:border-blue-400"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="emergency_contact">Emergency Contact Number</Label>
+          <Label htmlFor="emergencyPhone">Emergency Contact Number</Label>
           <Input 
-            id="emergency_contact" 
-            name="emergency_contact" 
-            value={formData.emergency_contact} 
+            id="emergencyPhone" 
+            name="emergencyContact.phone" 
+            value={formData.emergencyContact.phone} 
             onChange={handleChange} 
             placeholder="Enter emergency contact number"
             className="border-blue-200 focus:border-blue-400"
