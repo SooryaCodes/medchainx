@@ -956,74 +956,16 @@ export default function PatientDashboard() {
           
           {/* Medical History Tab */}
           <TabsContent value="history" className="space-y-6">
-            {(patient as any)?.medicalReports && (patient as any).medicalReports.length > 0 ? (
-              <Card className="bg-white/90 dark:bg-gray-800/90 hover:shadow-md transition-all border border-gray-100 dark:border-gray-700">
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <FileText className="h-5 w-5 mr-2 text-primary" />
-                    Medical Reports
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                      <div className="space-y-4">
-                    {(patient as any).medicalReports.map((report: any, index: number) => (
-                      <div key={index} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all">
-                        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-2">
-                          <h4 className="font-semibold">{report.title}</h4>
-                            <div className="flex items-center">
-                            <span className="text-sm text-gray-500 mr-2">{new Date(report.date).toLocaleDateString()}</span>
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
-                              {report.status}
-                            </span>
-                              </div>
-                            </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{report.content}</p>
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          <span className="text-xs text-gray-500">Doctor: {report.doctorName}</span>
-                          {report.tags && report.tags.map((tag: any, i: number) => (
-                            <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                              {tag}
-                            </span>
-                          ))}
-                              </div>
-                        {report.labReport && (
-                          <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-                            <h5 className="font-medium text-sm mb-2">Lab Results: {report.labReport.testName}</h5>
-                            <div className="space-y-2">
-                              {report.labReport.results.map((result: any, i: number) => (
-                                <div key={i} className="grid grid-cols-3 gap-2 text-sm">
-                                  <span>{result.parameter}</span>
-                                  <span className="font-medium">{result.value}</span>
-                                  <span className={`${
-                                    result.interpretation === "normal" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
-                                  }`}>
-                                    {result.interpretation}
-                                  </span>
-                            </div>
-                              ))}
-                              </div>
-                            <div className="mt-2 text-xs text-gray-500">
-                              Lab: {report.labReport.labName} | Technician: {report.labReport.technician}
-                            </div>
-                          </div>
-                        )}
-                        </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+            {selectedMedicalRecord ? (
+              <MedicalRecordDetail 
+                record={selectedMedicalRecord} 
+                onClose={handleCloseRecord} 
+              />
             ) : (
-              selectedMedicalRecord ? (
-                <MedicalRecordDetail 
-                  record={selectedMedicalRecord} 
-                  onClose={handleCloseRecord} 
-                />
-              ) : (
-                <MedicalHistoryList 
-                  records={patientMedicalRecords} 
-                  onSelectRecord={handleRecordSelect} 
-                />
-              )
+              <MedicalHistoryList 
+                records={patientMedicalRecords.length > 0 ? patientMedicalRecords : medicalHistory as DashboardMedicalRecord[]} 
+                onSelectRecord={handleRecordSelect} 
+              />
             )}
           </TabsContent>
           
@@ -1061,8 +1003,8 @@ export default function PatientDashboard() {
                             </div>
                             <div>
                             <span className="text-gray-500">Prescribed by:</span> {prescription.prescribedBy}
-                            </div>
                           </div>
+                        </div>
                         {prescription.instructions && (
                           <div className="mt-3 pt-2 border-t border-gray-100 dark:border-gray-700">
                             <p className="text-sm">

@@ -4,6 +4,7 @@ import { PatientModel, IPatient } from '../models';
 import { FHIRService } from '../services/fhir.service';
 import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
+import openAIService from '../services/openai.service';
 
 // Interface for patient registration data from frontend
 interface PatientRegistrationData {
@@ -202,6 +203,50 @@ export const getPatientById = catchAsync(async (req: Request, res: Response) => 
     res.status(500).json({
       success: false,
       error: 'Error fetching patient'
+    });
+  }
+});
+
+// @desc    Generate health risk analysis for a patient
+// @route   GET /api/patients/:id/health-risks
+// @access  Private
+export const generateHealthRiskAnalysis = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    // Check if ID is valid
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid patient ID format'
+      });
+    }
+
+    // Find patient by ID with all medical data
+    const patient = await PatientModel.findById(id);
+
+    // Check if patient exists
+    if (!patient) {
+      return res.status(404).json({
+        success: false,
+        error: 'Patient not found'
+      });
+    }
+
+    // Generate health risk analysis using OpenAI
+    const healthRiskAnalysis = await openAIService.generateHealthRiskAnalysis(patient);
+
+    // Return the analysis
+    res.status(200).json({
+      success: true,
+      data: healthRiskAnalysis,
+      message: 'Health risk analysis generated successfully'
+    });
+  } catch (error) {
+    console.error('Error generating health risk analysis:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error generating health risk analysis'
     });
   }
 });

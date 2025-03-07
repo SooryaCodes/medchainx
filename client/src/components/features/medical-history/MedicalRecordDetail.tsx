@@ -1,8 +1,8 @@
+import { useState } from "react";
 import { ChevronLeft, FileText, User, Calendar, Clipboard, FilePlus2, Download, Share2, Sparkles, Pill, Microscope } from "lucide-react";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 
 // Import the MedicalRecord interface
@@ -50,15 +50,36 @@ interface MedicalRecordDetailProps {
 export function MedicalRecordDetail({ record, onClose }: MedicalRecordDetailProps) {
   const [showAiSummary, setShowAiSummary] = useState(false);
   
-  // Generate AI summary based on the record content
+  // Mock AI summary for the medical record
   const aiSummary = {
     diagnosis: `Based on the data, this appears to be a ${record.description.toLowerCase()} record with ${
-      record.labResults.some(lab => lab.interpretation?.toLowerCase() === 'high') ? 'some abnormal' : 'normal'
+      record.labResults.some(lab => lab.interpretation?.toLowerCase() === 'high' || lab.interpretation?.toLowerCase() === 'elevated') ? 'some abnormal' : 'normal'
     } findings.`,
     treatment: record.prescriptions.length > 0 
       ? `Treatment includes ${record.prescriptions.map(p => p.name).join(', ')}.` 
       : "No specific treatment was prescribed for this visit.",
     followUp: `The recommended follow-up is ${record.followUp}.`
+  };
+  
+  // Function to get appropriate color based on record type
+  const getRecordTypeColor = (type: string, tags: string[] = []) => {
+    const lowerType = type.toLowerCase();
+    const lowerTags = tags.map(t => t.toLowerCase());
+    
+    if (lowerType.includes('diabetes') || lowerTags.includes('diabetes')) {
+      return 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800';
+    }
+    if (lowerType.includes('cardio') || lowerType.includes('heart') || lowerTags.includes('hypertension') || lowerTags.includes('cardiology')) {
+      return 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800';
+    }
+    if (lowerType.includes('vaccination') || lowerTags.includes('vaccination') || lowerTags.includes('preventive')) {
+      return 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800';
+    }
+    if (lowerType.includes('lab') || lowerType.includes('test') || lowerTags.includes('lab')) {
+      return 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800';
+    }
+    
+    return 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800';
   };
   
   return (
@@ -69,14 +90,6 @@ export function MedicalRecordDetail({ record, onClose }: MedicalRecordDetailProp
           Back to Medical History
         </Button>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="flex items-center">
-            <Download className="h-4 w-4 mr-1" />
-            Export
-          </Button>
-          <Button variant="outline" size="sm" className="flex items-center">
-            <Share2 className="h-4 w-4 mr-1" />
-            Share
-          </Button>
           <Button 
             variant={showAiSummary ? "default" : "outline"} 
             size="sm" 
@@ -85,6 +98,14 @@ export function MedicalRecordDetail({ record, onClose }: MedicalRecordDetailProp
           >
             <Sparkles className="h-4 w-4 mr-1" />
             {showAiSummary ? "Hide AI Summary" : "Show AI Summary"}
+          </Button>
+          <Button variant="outline" size="sm" className="flex items-center">
+            <Download className="h-4 w-4 mr-1" />
+            Export
+          </Button>
+          <Button variant="outline" size="sm" className="flex items-center">
+            <Share2 className="h-4 w-4 mr-1" />
+            Share
           </Button>
         </div>
       </div>
@@ -128,7 +149,7 @@ export function MedicalRecordDetail({ record, onClose }: MedicalRecordDetailProp
               <div className="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg">
                 <h4 className="font-medium mb-1">Hospital Information</h4>
                 <p className="text-sm">{record.doctor.hospital}</p>
-                <p className="text-sm">Location: {record.doctor.contact}</p>
+                <p className="text-sm">Contact: {record.doctor.contact}</p>
                 <p className="text-sm mt-2">Follow-up: {record.followUp}</p>
               </div>
             </div>
