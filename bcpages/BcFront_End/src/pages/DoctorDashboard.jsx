@@ -123,6 +123,7 @@ export default function DoctorDashboard() {
       )
     );
     setSelectedFiles(new Set());
+    handleSubmit()
     alert("Selected files uploaded to server!");
   };
 
@@ -138,6 +139,37 @@ export default function DoctorDashboard() {
 
   const toggleBase64View = () => {
     setShowBase64(prev => !prev);
+  };
+
+  const handleSubmit = async () => {
+    const patientData = {
+      name: fakePatientData.name,
+      age: fakePatientData.age,
+      diagnosis: fakePatientData.condition,
+      description: doctorNotes,
+      fileName: selectedFile ? selectedFile.name : "",
+      fileContent: selectedFile ? await fileToBase64(selectedFile) : ""
+    };
+
+    try {
+      const response = await fetch("http://localhost:3000/api/patient/add-patient", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(patientData)
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to add patient record");
+      }
+
+      const data = await response.json();
+      alert(data.message);
+    } catch (error) {
+      console.error("Error submitting patient data:", error);
+      alert("Failed to submit patient data");
+    }
   };
 
   return (
@@ -199,6 +231,9 @@ export default function DoctorDashboard() {
                   Save Note
                 </button>
               </div>
+              <button onClick={handleSubmit} className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 mt-4">
+                Submit Patient Data
+              </button>
             </div>
           </div>
 

@@ -6,30 +6,32 @@ import Appointment from "./pages/Appointment";
 import Help from "./pages/Help";
 import Login from "./pages/Login";
 import Settings from "./pages/Settings";
+import BlockchainView from "./pages/BlockchainView"; // Import the new component
 
 const AppRoutes = () => {
-    const location = useLocation();
-    
-    return (
-        <Routes key={location.pathname} location={location}>
-            <Route path="/" element={<Login />} />
-            <Route path="/user-dashboard" element={<UserDashboard />} />
-            <Route path="/doctor-dashboard" element={<DoctorDashboard />} />
-            <Route path="/appointment" element={<Appointment />} />
-            <Route path="/help" element={<Help />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/settings" element={<Settings />} />
-        </Routes>
-    );
+  const location = useLocation();
+
+  return (
+    <Routes key={location.pathname} location={location}>
+      <Route path="/" element={<Login />} />
+      <Route path="/user-dashboard" element={<UserDashboard />} />
+      <Route path="/doctor-dashboard" element={<DoctorDashboard />} />
+      <Route path="/appointment" element={<Appointment />} />
+      <Route path="/help" element={<Help />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/settings" element={<Settings />} />
+      <Route path="/blockchain" element={<BlockchainView />} /> {/* Add the new route */}
+    </Routes>
+  );
 };
 
 const App = () => {
-    return (
-        <Router>
-            <Navbar />
-            <AppRoutes />
-        </Router>
-    );
+  return (
+    <Router>
+      <Navbar />
+      <AppRoutes />
+    </Router>
+  );
 };
 
 export default App;
