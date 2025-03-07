@@ -325,6 +325,48 @@ export default function PatientDashboard() {
     }
   };
 
+  // Format token for display (first 6 chars + masked middle + last 4 chars)
+  const formatTokenForDisplay = (token: string) => {
+    if (!token) return "";
+    const firstPart = token.substring(0, 6);
+    const lastPart = token.substring(token.length - 4);
+    const maskedLength = token.length - 10;
+    const maskedPart = "•".repeat(Math.min(maskedLength, 20));
+    return `${firstPart}${maskedPart}${lastPart}`;
+  };
+
+  // Calculate percentage of time remaining
+  const calculateTimeRemainingPercentage = () => {
+    if (!tokenExpiry) return 0;
+    
+    const now = new Date();
+    const creationTime = new Date(tokenExpiry.getTime());
+    
+    // Determine original duration based on selected value
+    const expirySelect = document.getElementById("token-validity") as HTMLSelectElement;
+    const expiryValue = expirySelect?.value || "1h";
+    let originalDurationMs = 60 * 60 * 1000; // Default 1h
+    
+    switch(expiryValue) {
+      case "30m": originalDurationMs = 30 * 60 * 1000; break;
+      case "45m": originalDurationMs = 45 * 60 * 1000; break;
+      case "1h": originalDurationMs = 60 * 60 * 1000; break;
+      case "2h": originalDurationMs = 2 * 60 * 60 * 1000; break;
+      case "4h": originalDurationMs = 4 * 60 * 60 * 1000; break;
+      case "8h": originalDurationMs = 8 * 60 * 60 * 1000; break;
+      case "24h": originalDurationMs = 24 * 60 * 60 * 1000; break;
+    }
+    
+    // Adjust creation time
+    creationTime.setTime(creationTime.getTime() - originalDurationMs);
+    
+    const totalDuration = tokenExpiry.getTime() - creationTime.getTime();
+    const elapsed = now.getTime() - creationTime.getTime();
+    const percentage = Math.max(0, Math.min(100, (elapsed / totalDuration) * 100));
+    
+    return 100 - percentage; // Return remaining percentage
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Background Pattern */}
@@ -444,8 +486,8 @@ export default function PatientDashboard() {
                 </p>
                 
                 <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-md mb-4 relative">
-                  <p className="text-sm font-mono break-all">
-                    {generatedToken.substring(0, 10)}...{generatedToken.substring(generatedToken.length - 10)}
+                  <p className="text-sm font-mono tracking-wider text-center">
+                    {formatTokenForDisplay(generatedToken)}
                   </p>
                   <button 
                     onClick={handleCopyToken}
@@ -458,32 +500,36 @@ export default function PatientDashboard() {
                   </button>
                 </div>
                 
-                {/* Token Expiry Countdown */}
+                {/* Enhanced Token Expiry Countdown */}
                 <div className="mb-6">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Token expires in:</span>
-                    <span className="text-sm font-medium text-red-600 dark:text-red-400">{remainingTime}</span>
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 bg-red-500 rounded-full mr-2 animate-pulse"></div>
+                      <span className="text-sm font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-md">
+                        {remainingTime}
+                      </span>
+                    </div>
                   </div>
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mb-1">
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mb-1 overflow-hidden">
                     {tokenExpiry && (
                       <div 
-                        className="bg-gradient-to-r from-red-500 to-amber-500 h-2.5 rounded-full transition-all duration-1000"
-                        style={{ 
-                          width: `${tokenExpiry ? 
-                            Math.max(0, (tokenExpiry.getTime() - Date.now()) / 
-                            (tokenExpiry.getTime() - (tokenExpiry.getTime() - (
-                              tokenExpiry.getTime() - new Date().getTime() + 1000 * 60 * 60 * 24
-                            ))) * 100) : 0}%` 
-                        }}
+                        className="bg-gradient-to-r from-green-500 via-blue-500 to-indigo-500 h-2.5 rounded-full transition-all duration-1000"
+                        style={{ width: `${calculateTimeRemainingPercentage()}%` }}
                       ></div>
                     )}
                   </div>
                 </div>
                 
-                <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md mb-6">
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-md mb-6 border border-blue-100 dark:border-blue-800">
+                  <div className="flex">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
                   <p className="text-sm text-blue-800 dark:text-blue-300">
                     <span className="font-medium">Important:</span> This token grants temporary access to your medical data. Do not share it with unauthorized individuals.
                   </p>
+                  </div>
                 </div>
                 
                 <div className="flex justify-end gap-3">
@@ -498,6 +544,9 @@ export default function PatientDashboard() {
                     className="bg-blue-600 hover:bg-blue-700 text-white"
                     onClick={handleCopyToken}
                   >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                    </svg>
                     Copy Token
                   </Button>
                 </div>
@@ -507,29 +556,41 @@ export default function PatientDashboard() {
         </div>
       )}
       
-      {/* Active Token Indicator */}
+      {/* Active Token Indicator - Enhanced */}
       {generatedToken && tokenExpiry && (
         <div className="fixed bottom-4 right-4 z-40">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 border border-gray-200 dark:border-gray-700 max-w-xs">
-            <div className="flex items-center justify-between mb-2">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-4 border border-gray-200 dark:border-gray-700 max-w-xs animate-in slide-in-from-right-10 duration-300">
+            <div className="flex items-center justify-between mb-3">
               <div className="flex items-center">
                 <div className="w-3 h-3 bg-green-500 rounded-full mr-2 animate-pulse"></div>
                 <h4 className="font-medium text-sm">Active Token</h4>
               </div>
-              <span className="text-xs font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
-                {remainingTime}
-              </span>
+              <button 
+                onClick={() => setShowTokenModal(true)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+              </button>
             </div>
-            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+            
+            <div className="bg-gray-100 dark:bg-gray-700 p-2 rounded-md mb-3 text-center">
+              <p className="text-xs font-mono tracking-wider">
+                {formatTokenForDisplay(generatedToken)}
+              </p>
+            </div>
+            
+            <div className="flex items-center justify-between mb-1.5 text-xs">
+              <span className="text-gray-600 dark:text-gray-400">Expires in:</span>
+              <span className="font-mono text-red-600 dark:text-red-400">{remainingTime}</span>
+            </div>
+            
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
               <div 
-                className="bg-gradient-to-r from-green-500 to-blue-500 h-1.5 rounded-full transition-all duration-1000"
-                style={{ 
-                  width: `${tokenExpiry ? 
-                    Math.max(0, (tokenExpiry.getTime() - Date.now()) / 
-                    (tokenExpiry.getTime() - (tokenExpiry.getTime() - (
-                      tokenExpiry.getTime() - new Date().getTime() + 1000 * 60 * 60 * 24
-                    ))) * 100) : 0}%` 
-                }}
+                className="bg-gradient-to-r from-green-500 via-blue-500 to-indigo-500 h-1.5 rounded-full transition-all duration-1000"
+                style={{ width: `${calculateTimeRemainingPercentage()}%` }}
               ></div>
             </div>
           </div>
@@ -571,8 +632,8 @@ export default function PatientDashboard() {
           
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
-            {/* Prominent Token Generation Card */}
-            <Card className="bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 text-white hover:shadow-lg transition-all border-none mb-6">
+            {/* Prominent Token Generation Card - Enhanced with active token display */}
+            <Card className={`${generatedToken ? 'bg-gradient-to-r from-green-500 to-blue-600 dark:from-green-600 dark:to-blue-700' : 'bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700'} text-white hover:shadow-lg transition-all border-none mb-6`}>
               <CardContent className="pt-6">
                 <div className="flex flex-col md:flex-row items-center justify-between">
                   <div className="flex items-center mb-4 md:mb-0">
@@ -582,17 +643,68 @@ export default function PatientDashboard() {
                       </svg>
                     </div>
                     <div>
+                      {generatedToken ? (
+                        <>
+                          <h3 className="text-xl font-bold">Active Access Token</h3>
+                          <div className="flex items-center mt-1">
+                            <div className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse"></div>
+                            <p className="text-blue-100">Expires in: {remainingTime}</p>
+                          </div>
+                        </>
+                      ) : (
+                        <>
                       <h3 className="text-xl font-bold">Share Your Medical Data</h3>
                       <p className="text-blue-100">Generate a secure access token for your healthcare providers</p>
+                        </>
+                      )}
                     </div>
                   </div>
+                  
+                  {generatedToken ? (
+                    <div className="flex flex-col items-end">
+                      <div className="bg-white/10 p-2 rounded-md mb-2 text-center w-full md:w-auto">
+                        <p className="text-xs font-mono tracking-wider">
+                          {formatTokenForDisplay(generatedToken)}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          className="bg-white/20 hover:bg-white/30 text-white border border-white/30"
+                          onClick={handleCopyToken}
+                          size="sm"
+                        >
+                          Copy
+                        </Button>
+                        <Button 
+                          className="bg-white text-blue-600 hover:bg-blue-50"
+                          onClick={() => setShowTokenModal(true)}
+                          size="sm"
+                        >
+                          View Details
+                        </Button>
+                    </div>
+                  </div>
+                  ) : (
                   <Button 
                     className="bg-white text-blue-600 hover:bg-blue-50 px-6 py-2 shadow-md"
                     onClick={() => setShowTokenModal(true)}
                   >
                     Generate Token
                   </Button>
+                  )}
                 </div>
+                
+                {/* Progress bar for active token */}
+                {generatedToken && (
+                  <div className="mt-4">
+                    <div className="w-full bg-white/20 rounded-full h-1.5 overflow-hidden">
+                      <div 
+                        className="bg-white h-1.5 rounded-full transition-all duration-1000"
+                        style={{ width: `${calculateTimeRemainingPercentage()}%` }}
+                      ></div>
+                    </div>
+                </div>
+                )}
               </CardContent>
             </Card>
             
