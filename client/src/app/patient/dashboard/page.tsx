@@ -437,23 +437,6 @@ export default function PatientDashboard() {
     // Don't reset token state, just close the modal
   };
 
-  // Add a logout button in the header
-  const renderHeader = () => (
-    <div className="flex justify-between items-center mb-6">
-      <h1 className="text-3xl font-bold">Patient Dashboard</h1>
-      <div className="flex items-center gap-4">
-        <div className="flex items-center">
-          <User className="mr-2" />
-          {patient ? `${patient.name.given.join(' ')} ${patient.name.family}` : 'Loading...'}
-        </div>
-        <Button variant="outline" onClick={logout} className="flex items-center gap-2">
-          <LogOut size={16} />
-          Logout
-        </Button>
-      </div>
-    </div>
-  );
-  
   // Add MedChainX branding
   const renderMedChainX = () => (
     <div className="mb-6 p-4 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg text-white">
@@ -466,7 +449,6 @@ export default function PatientDashboard() {
   if (loading) {
     return (
       <div className="container mx-auto p-6">
-        {renderHeader()}
         <div className="flex items-center justify-center h-[60vh]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
@@ -481,7 +463,6 @@ export default function PatientDashboard() {
   if (error) {
     return (
       <div className="container mx-auto p-6">
-        {renderHeader()}
         <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
           <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-red-700 mb-2">Error Loading Data</h2>
@@ -494,7 +475,6 @@ export default function PatientDashboard() {
   
   return (
     <div className="container mx-auto p-6">
-      {renderHeader()}
       {renderMedChainX()}
       
       {/* Token Generation Modal */}
@@ -791,12 +771,15 @@ export default function PatientDashboard() {
       )}
       
       <div className="container mx-auto px-4 py-8">
-        {/* Header Section */}
+        {/* Header Section - Modified to include patient name and logout button */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Patient Dashboard</h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">Welcome back, John Doe</p>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
+              Welcome back, {patient ? `${patient.name.given.join(' ')} ${patient.name.family}` : 'Loading...'}
+            </p>
           </div>
+
           <div className="mt-4 md:mt-0 flex items-center gap-2">
             <Button 
               className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-6 py-5 text-base shadow-lg hover:shadow-xl transition-all"
@@ -810,6 +793,10 @@ export default function PatientDashboard() {
             <Button variant="outline" className="flex items-center gap-2">
               <User className="h-4 w-4" />
               Profile
+            </Button>
+            <Button variant="outline" onClick={logout} className="flex items-center gap-2">
+              <LogOut className="h-4 w-4" />
+              Logout
             </Button>
           </div>
         </div>

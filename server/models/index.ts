@@ -103,85 +103,165 @@ export interface IPatient extends Document {
   healthInsuranceId: string;
   nationalId: string;
   doctors: mongoose.Types.ObjectId[];
-  medicalReports: mongoose.Types.ObjectId[];
+  medicalReports: IMedicalReport[];
   appointments: mongoose.Types.ObjectId[];
   prescriptions: mongoose.Types.ObjectId[];
-  generateAuthToken: () => string;
+  generateAuthToken(): string;
 }
 
-const PatientSchema = new Schema({
-  username: {
-    type: String,
+export interface IMedicalReport extends Document {
+  title: string;
+  date: Date;
+  doctorId: mongoose.Types.ObjectId;
+  doctorName: string;
+  type: 'general' | 'prescription' | 'labReport' | 'doctorNote' | 'referral' | 'imaging';
+  content: string;
+  
+  // For prescriptions
+  prescription?: {
+    medication: string;
+    dosage: string;
+    frequency: string;
+    startDate: Date;
+    endDate: Date;
+    instructions: string;
+  };
+  
+  // For lab reports
+  labReport?: {
+    testName: string;
+    testDate: Date;
+    results: Array<{
+      parameter: string;
+      value: string;
+      normalRange: string;
+      interpretation: string;
+    }>;
+    labName: string;
+    technician: string;
+  };
+  
+  // For imaging reports
+  imaging?: {
+    type: 'xray' | 'mri' | 'ct' | 'ultrasound' | 'other';
+    bodyPart: string;
+    findings: string;
+    impression: string;
+    recommendations: string;
+  };
+  
+  attachments?: Array<{
+    name: string;
+    fileType: string;
+    url: string;
+    uploadDate: Date;
+  }>;
+  
+  status: 'draft' | 'final' | 'amended';
+  tags?: string[];
+}
+
+const MedicalReportSchema = new Schema<IMedicalReport>({
+  title: { type: String, required: true },
+  date: { type: Date, required: true, default: Date.now },
+  doctorId: { type: Schema.Types.ObjectId, ref: 'Doctor', required: true },
+  doctorName: { type: String, required: true },
+  type: { 
+    type: String, 
     required: true,
-    unique: true
+    enum: ['general', 'prescription', 'labReport', 'doctorNote', 'referral', 'imaging']
   },
-  password: {
-    type: String,
-    required: true
+  content: { type: String, required: true },
+  
+  prescription: {
+    medication: String,
+    dosage: String,
+    frequency: String,
+    startDate: Date,
+    endDate: Date,
+    instructions: String
   },
-  name: {
-    given: [String],
-    family: {
+  
+  labReport: {
+    testName: String,
+    testDate: Date,
+    results: [{
+      parameter: String,
+      value: String,
+      normalRange: String,
+      interpretation: String
+    }],
+    labName: String,
+    technician: String
+  },
+  
+  imaging: {
+    type: { 
       type: String,
-      required: true
-    }
-  },
-  birthDate: {
-    type: String,
-    required: true
-  },
-  gender: {
-    type: String,
-    required: true
-  },
-  contact: {
-    email: {
-      type: String,
-      required: true,
-      unique: true
+      enum: ['xray', 'mri', 'ct', 'ultrasound', 'other']
     },
-    phone: {
-      type: String,
-      required: true
-    }
+    bodyPart: String,
+    findings: String,
+    impression: String,
+    recommendations: String
   },
-  address: {
-    street: String,
-    city: String,
-    state: String,
-    postalCode: String,
-    country: String
-  },
-  emergencyContact: {
+  
+  attachments: [{
     name: String,
-    phone: String,
-    relationship: String
+    fileType: String,
+    url: String,
+    uploadDate: { type: Date, default: Date.now }
+  }],
+  
+  status: { 
+    type: String, 
+    required: true, 
+    enum: ['draft', 'final', 'amended'],
+    default: 'draft'
   },
-  bloodType: String,
-  healthInsuranceId: String,
-  nationalId: String,
-  doctors: [{
-    type: Schema.Types.ObjectId,
-    ref: 'Doctor'
-  }],
-  medicalReports: [{
-    type: Schema.Types.ObjectId,
-    ref: 'MedicalReport'
-  }],
-  appointments: [{
-    type: Schema.Types.ObjectId,
-    ref: 'Appointment'
-  }],
-  prescriptions: [{
-    type: Schema.Types.ObjectId,
-    ref: 'Prescription'
-  }]
+  tags: [String]
 }, {
   timestamps: true
 });
 
-// Add JWT token generation method
-PatientSchema.methods.generateAuthToken = function(): string {
+const PatientSchema = new Schema<IPatient>({
+  username: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  name: {
+    given: [{ type: String, required: true }],
+    family: { type: String, required: true }
+  },
+  birthDate: { type: String, required: true },
+  gender: { type: String, required: true },
+  contact: {
+    email: { type: String, required: true, unique: true },
+    phone: { type: String, required: true }
+  },
+  address: {
+    street: { type: String, required: true },
+    city: { type: String, required: true },
+    state: { type: String, required: true },
+    postalCode: { type: String, required: true },
+    country: { type: String, required: true }
+  },
+  emergencyContact: {
+    name: { type: String, required: true },
+    phone: { type: String, required: true },
+    relationship: { type: String, required: true }
+  },
+  bloodType: { type: String },
+  healthInsuranceId: { type: String },
+  nationalId: { type: String },
+  doctors: [{ type: Schema.Types.ObjectId, ref: 'Doctor' }],
+  medicalReports: [MedicalReportSchema],
+  appointments: [{ type: Schema.Types.ObjectId, ref: 'Appointment' }],
+  prescriptions: [{ type: Schema.Types.ObjectId, ref: 'Prescription' }]
+}, {
+  timestamps: true
+});
+
+// Add method to generate JWT token
+PatientSchema.methods.generateAuthToken = function() {
   return jwt.sign(
     { id: this._id },
     process.env.JWT_SECRET || 'your-secret-key',
@@ -189,29 +269,5 @@ PatientSchema.methods.generateAuthToken = function(): string {
   );
 };
 
-export const PatientModel = mongoose.model<IPatient>("Patient", PatientSchema);
-
-// 4️⃣ Medical Report Schema
-export interface IMedicalReport extends Document {
-  patientId: mongoose.Types.ObjectId;
-  doctorId: mongoose.Types.ObjectId;
-  date: Date;
-  diagnosis: string;
-  prescriptions: { medicine: string; dosage: string; duration: string }[];
-  additionalNotes?: string;
-  healthCaseTips?: string;
-  attachedReports?: { url: string; type: string }[]; // Stores links to reports, images, PDFs
-}
-
-const MedicalReportSchema = new Schema<IMedicalReport>({
-  patientId: { type: Schema.Types.ObjectId, ref: "Patient", required: true },
-  doctorId: { type: Schema.Types.ObjectId, ref: "Doctor", required: true },
-  date: { type: Date, required: true },
-  diagnosis: { type: String, required: true },
-  prescriptions: [{ medicine: String, dosage: String, duration: String }],
-  additionalNotes: { type: String },
-  healthCaseTips: { type: String },
-  attachedReports: [{ url: String, type: String }],
-});
-
-export const MedicalReportModel = mongoose.model<IMedicalReport>("MedicalReport", MedicalReportSchema); 
+export const MedicalReportModel = mongoose.model<IMedicalReport>('MedicalReport', MedicalReportSchema);
+export const PatientModel = mongoose.model<IPatient>('Patient', PatientSchema); 

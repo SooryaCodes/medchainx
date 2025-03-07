@@ -3,6 +3,7 @@ import { catchAsync } from '../utils/catchAsync';
 import { PatientModel, IPatient } from '../models';
 import { FHIRService } from '../services/fhir.service';
 import bcrypt from 'bcryptjs';
+import mongoose from 'mongoose';
 
 // Interface for patient registration data from frontend
 interface PatientRegistrationData {
@@ -103,6 +104,52 @@ export const registerPatient = catchAsync(async (
     res.status(500).json({
       success: false,
       error: 'Error registering patient'
+    });
+  }
+});
+
+// @desc    Get patient by ID
+// @route   GET /api/patients/:id
+// @access  Private
+export const getPatientById = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    // Check if ID is valid
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid patient ID format'
+      });
+    }
+
+    // Find patient by ID and exclude sensitive information
+    const patient = await PatientModel.findById(id)
+      .select('-username -password') // Exclude username and password
+      .populate('doctors', 'name specialty')
+      .populate('medicalReports')
+      .populate('appointments')
+      .populate('prescriptions');
+
+    // Check if patient exists
+    if (!patient) {
+      return res.status(404).json({
+        success: false,
+        error: 'Patient not found'
+      });
+    }
+
+    // Return patient data with the same format as other responses
+    res.status(200).json({
+      success: true,
+      data: patient,
+      message: 'Patient data retrieved successfully'
+    });
+  } catch (error) {
+    console.error('Error fetching patient:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error retrieving patient data'
     });
   }
 });
