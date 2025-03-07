@@ -3,25 +3,43 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Select } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { UserIcon, Phone, MapPin, Heart, UserPlus } from "lucide-react";
 import axiosInstance from '@/lib/axios';
 import { setAuthCookies } from '@/lib/cookies';
 import { useRouter } from 'next/navigation';
 import { PatientRegistrationData, RegistrationResponse } from '@/types/auth';
 
 const patientSchema = z.object({
+  username: z.string().min(4, 'Username must be at least 4 characters'),
+  password: z.string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])/, 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'),
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
   lastName: z.string().min(2, 'Last name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
-  password: z.string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Password must contain at least one uppercase letter, one lowercase letter, and one number'),
+  phone: z.string().regex(/^\+?[1-9]\d{9,14}$/, 'Invalid phone number'),
   dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format'),
   gender: z.enum(['male', 'female', 'other']),
-  phoneNumber: z.string().regex(/^\+?[1-9]\d{9,14}$/, 'Invalid phone number'),
-  address: z.string().min(10, 'Address must be at least 10 characters'),
+  address: z.object({
+    street: z.string().min(5, 'Street address is required'),
+    city: z.string().min(2, 'City is required'),
+    state: z.string().min(2, 'State is required'),
+    postalCode: z.string().min(4, 'Valid postal code is required'),
+    country: z.string().min(2, 'Country is required')
+  }),
+  emergencyContact: z.object({
+    name: z.string().min(2, 'Emergency contact name is required'),
+    phone: z.string().regex(/^\+?[1-9]\d{9,14}$/, 'Invalid emergency contact phone number'),
+    relationship: z.string().min(2, 'Relationship is required')
+  }),
+  bloodType: z.enum(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']),
+  healthInsuranceId: z.string().min(8, 'Valid health insurance ID is required'),
+  nationalId: z.string().min(8, 'Valid national ID is required')
 });
 
 interface Props {
@@ -47,12 +65,23 @@ export default function PatientRegistration({ step, setStep }: Props) {
       setIsLoading(true);
       setError('');
       
-      const response = await axiosInstance.post<RegistrationResponse>('/patients/register', data);
+      const formattedData = {
+        ...data,
+        phone: data.phone.startsWith('+') ? data.phone : `+${data.phone}`,
+        emergencyContact: {
+          ...data.emergencyContact,
+          phone: data.emergencyContact.phone.startsWith('+') ? 
+            data.emergencyContact.phone : 
+            `+${data.emergencyContact.phone}`
+        }
+      };
+
+      const response = await axiosInstance.post<RegistrationResponse>('/patients/register', formattedData);
       
       if (response.data.success) {
         const { token, patientId } = response.data.data;
         setAuthCookies(token, patientId);
-        router.push('/dashboard'); // Redirect to dashboard after successful registration
+        router.push('/dashboard');
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
@@ -61,87 +90,310 @@ export default function PatientRegistration({ step, setStep }: Props) {
     }
   };
 
-  return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      {error && (
-        <div className="p-4 bg-red-50 text-red-600 rounded-lg">
-          {error}
-        </div>
-      )}
-
-      {step === 1 && (
-        <>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Input
-                {...register('firstName')}
-                placeholder="First Name"
-                error={errors.firstName?.message}
-              />
-            </div>
-            <div>
-              <Input
-                {...register('lastName')}
-                placeholder="Last Name"
-              />
-              {errors.lastName && (
-                <p className="text-red-500 text-sm mt-1">{errors.lastName.message}</p>
-              )}
-            </div>
-          </div>
-          <Input
-            {...register('email')}
-            type="email"
-            placeholder="Email"
-            error={errors.email?.message}
+  const renderStep1 = () => (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3 mb-6">
+        <UserIcon className="h-6 w-6 text-blue-600" />
+        <h2 className="text-xl font-semibold text-blue-800 dark:text-blue-300">Account Information</h2>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2 md:col-span-2">
+          <Label htmlFor="username">Username</Label>
+          <Input 
+            {...register('username')}
+            placeholder="Choose a username"
+            className="border-blue-200 focus:border-blue-400"
           />
-          <Input
+          {errors.username && (
+            <p className="text-red-500 text-sm mt-1">{errors.username.message}</p>
+          )}
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="password">Password</Label>
+          <Input 
             {...register('password')}
             type="password"
-            placeholder="Password"
-            error={errors.password?.message}
+            placeholder="Create a password"
+            className="border-blue-200 focus:border-blue-400"
           />
-        </>
-      )}
+          {errors.password && (
+            <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
+          )}
+        </div>
+      </div>
 
-      {step === 2 && (
-        <>
-          <Input
+      <div className="flex items-center gap-3 mt-8 mb-4">
+        <UserPlus className="h-6 w-6 text-blue-600" />
+        <h2 className="text-xl font-semibold text-blue-800 dark:text-blue-300">Personal Information</h2>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="firstName">First Name</Label>
+          <Input 
+            {...register('firstName')}
+            placeholder="Enter first name"
+            className="border-blue-200 focus:border-blue-400"
+          />
+          {errors.firstName && (
+            <p className="text-red-500 text-sm mt-1">{errors.firstName.message}</p>
+          )}
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="lastName">Last Name</Label>
+          <Input 
+            {...register('lastName')}
+            placeholder="Enter last name"
+            className="border-blue-200 focus:border-blue-400"
+          />
+          {errors.lastName && (
+            <p className="text-red-500 text-sm mt-1">{errors.lastName.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input 
+            {...register('email')}
+            type="email"
+            placeholder="Enter email address"
+            className="border-blue-200 focus:border-blue-400"
+          />
+          {errors.email && (
+            <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="nationalId">National ID</Label>
+          <Input 
+            {...register('nationalId')}
+            placeholder="Enter national ID"
+            className="border-blue-200 focus:border-blue-400"
+          />
+          {errors.nationalId && (
+            <p className="text-red-500 text-sm mt-1">{errors.nationalId.message}</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderStep2 = () => (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3 mb-6">
+        <Heart className="h-6 w-6 text-blue-600" />
+        <h2 className="text-xl font-semibold text-blue-800 dark:text-blue-300">Health Information</h2>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="dateOfBirth">Date of Birth</Label>
+          <Input 
             {...register('dateOfBirth')}
             type="date"
-            placeholder="Date of Birth"
-            error={errors.dateOfBirth?.message}
+            className="border-blue-200 focus:border-blue-400"
           />
-          <Select
-            {...register('gender')}
-            error={errors.gender?.message}
-          >
-            <option value="">Select Gender</option>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-            <option value="other">Other</option>
-          </Select>
-        </>
-      )}
-
-      {step === 3 && (
-        <>
-          <Input
-            {...register('phoneNumber')}
-            placeholder="Phone Number"
-            error={errors.phoneNumber?.message}
-          />
-          <textarea
-            {...register('address')}
-            placeholder="Address"
-            className="w-full p-2 border rounded"
-            rows={4}
-          />
-          {errors.address && (
-            <p className="text-red-500 text-sm">{errors.address.message}</p>
+          {errors.dateOfBirth && (
+            <p className="text-red-500 text-sm mt-1">{errors.dateOfBirth.message}</p>
           )}
-        </>
-      )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="gender">Gender</Label>
+          <Select onValueChange={(value) => register('gender').onChange({ target: { value } })}>
+            <SelectTrigger className="border-blue-200">
+              <SelectValue placeholder="Select gender" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="male">Male</SelectItem>
+              <SelectItem value="female">Female</SelectItem>
+              <SelectItem value="other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+          {errors.gender && (
+            <p className="text-red-500 text-sm mt-1">{errors.gender.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="bloodType">Blood Type</Label>
+          <Select onValueChange={(value) => register('bloodType').onChange({ target: { value } })}>
+            <SelectTrigger className="border-blue-200">
+              <SelectValue placeholder="Select blood type" />
+            </SelectTrigger>
+            <SelectContent>
+              {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((type) => (
+                <SelectItem key={type} value={type}>{type}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {errors.bloodType && (
+            <p className="text-red-500 text-sm mt-1">{errors.bloodType.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="healthInsuranceId">Health Insurance ID</Label>
+          <Input 
+            {...register('healthInsuranceId')}
+            placeholder="Enter health insurance ID"
+            className="border-blue-200 focus:border-blue-400"
+          />
+          {errors.healthInsuranceId && (
+            <p className="text-red-500 text-sm mt-1">{errors.healthInsuranceId.message}</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderStep3 = () => (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3 mb-6">
+        <MapPin className="h-6 w-6 text-blue-600" />
+        <h2 className="text-xl font-semibold text-blue-800 dark:text-blue-300">Contact Information</h2>
+      </div>
+      
+      <div className="grid grid-cols-1 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="phone">Phone Number</Label>
+          <Input 
+            {...register('phone')}
+            placeholder="Enter phone number"
+            className="border-blue-200 focus:border-blue-400"
+          />
+          {errors.phone && (
+            <p className="text-red-500 text-sm mt-1">{errors.phone.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="address.street">Street Address</Label>
+          <Input 
+            {...register('address.street')}
+            placeholder="Enter street address"
+            className="border-blue-200 focus:border-blue-400"
+          />
+          {errors.address?.street && (
+            <p className="text-red-500 text-sm mt-1">{errors.address.street.message}</p>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="address.city">City</Label>
+            <Input 
+              {...register('address.city')}
+              placeholder="Enter city"
+              className="border-blue-200 focus:border-blue-400"
+            />
+            {errors.address?.city && (
+              <p className="text-red-500 text-sm mt-1">{errors.address.city.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="address.state">State</Label>
+            <Input 
+              {...register('address.state')}
+              placeholder="Enter state"
+              className="border-blue-200 focus:border-blue-400"
+            />
+            {errors.address?.state && (
+              <p className="text-red-500 text-sm mt-1">{errors.address.state.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="address.postalCode">Postal Code</Label>
+            <Input 
+              {...register('address.postalCode')}
+              placeholder="Enter postal code"
+              className="border-blue-200 focus:border-blue-400"
+            />
+            {errors.address?.postalCode && (
+              <p className="text-red-500 text-sm mt-1">{errors.address.postalCode.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="address.country">Country</Label>
+            <Input 
+              {...register('address.country')}
+              placeholder="Enter country"
+              className="border-blue-200 focus:border-blue-400"
+            />
+            {errors.address?.country && (
+              <p className="text-red-500 text-sm mt-1">{errors.address.country.message}</p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 mt-8 mb-4">
+          <Phone className="h-6 w-6 text-blue-600" />
+          <h2 className="text-xl font-semibold text-blue-800 dark:text-blue-300">Emergency Contact</h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="emergencyContact.name">Contact Name</Label>
+            <Input 
+              {...register('emergencyContact.name')}
+              placeholder="Enter emergency contact name"
+              className="border-blue-200 focus:border-blue-400"
+            />
+            {errors.emergencyContact?.name && (
+              <p className="text-red-500 text-sm mt-1">{errors.emergencyContact.name.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="emergencyContact.phone">Contact Phone</Label>
+            <Input 
+              {...register('emergencyContact.phone')}
+              placeholder="Enter emergency contact phone"
+              className="border-blue-200 focus:border-blue-400"
+            />
+            {errors.emergencyContact?.phone && (
+              <p className="text-red-500 text-sm mt-1">{errors.emergencyContact.phone.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="emergencyContact.relationship">Relationship</Label>
+            <Input 
+              {...register('emergencyContact.relationship')}
+              placeholder="Enter relationship to emergency contact"
+              className="border-blue-200 focus:border-blue-400"
+            />
+            {errors.emergencyContact?.relationship && (
+              <p className="text-red-500 text-sm mt-1">{errors.emergencyContact.relationship.message}</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <Card className="border-blue-100 dark:border-blue-900">
+        <CardContent className="p-6">
+          {error && (
+            <div className="p-4 mb-6 bg-red-50 text-red-600 rounded-lg">
+              {error}
+            </div>
+          )}
+          
+          {step === 1 && renderStep1()}
+          {step === 2 && renderStep2()}
+          {step === 3 && renderStep3()}
+        </CardContent>
+      </Card>
     </form>
   );
 }
