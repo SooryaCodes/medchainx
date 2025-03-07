@@ -1,0 +1,57 @@
+{
+    "patient_id": "P1002",
+    "general_info": {
+      "name": "Jane Smith",
+      "age": 32,
+      "gender": "Female",
+      "blood_type": "A-",
+      "contact": {
+        "phone": "+1 987 654 321",
+        "email": "janesmith@example.com"
+      },
+      "address": "456 Maple Avenue, New York, USA"
+    },
+    "medical_history": {
+      "diseases": [
+        {
+          "name": "Asthma",
+          "diagnosed_on": "2015-07-10",
+          "medications": [
+            {"name": "Salbutamol", "dosage": "As needed"}
+          ]
+        },
+        {
+          "name": "Iron Deficiency Anemia",
+          "diagnosed_on": "2023-06-14",
+          "medications": [
+            {"name": "Ferrous Sulfate", "dosage": "325mg daily"}
+          ]
+        }
+      ],
+      "scan_reports": [
+        {
+          "type": "Lung Function Test",
+          "date": "2024-01-25",
+          "result": "Moderate airflow obstruction"
+        },
+        {
+          "type": "Abdominal Ultrasound",
+          "date": "2023-10-30",
+          "result": "Mild fatty liver changes"
+        }
+      ],
+      "lab_values": {
+        "Hemoglobin": {
+          "value": "11.0 g/dL",
+          "date": "2024-02-15",
+          "normal_range": "12.0 - 16.0 g/dL"
+        },
+        "Iron Levels": {
+          "value": "35 mcg/dL",
+          "date": "2024-01-18",
+          "normal_range": "50 - 170 mcg/dL"
+        }
+      }
+    }
+  }
+  

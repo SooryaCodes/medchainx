@@ -1,77 +1,105 @@
-import { useState } from "react";
-import { Card, CardContent } from "../components/ui/card";
-import { Button } from "../components/ui/button";
+import { useState, useEffect } from "react";
 
-const UserDashboard = () => {
-  const [activeTab, setActiveTab] = useState("labResults");
+export default function PatientDashboard({ userId }) {
+  const [previewFile, setPreviewFile] = useState(null);
+  const [showBase64, setShowBase64] = useState(false);
+  const [patientData, setPatientData] = useState(null);
 
-  const fakeUserData = {
-    medicalTimeline: [
-      { date: "2024-03-01", event: "Routine Checkup" },
-      { date: "2024-02-20", event: "Blood Test" },
-      { date: "2024-01-15", event: "X-Ray Scan" },
-    ],
-    healthMetrics: { heartRate: 72, bloodPressure: "120/80", weight: "70kg" },
-    medicalRecords: {
-      labResults: "Blood test results: Normal.",
-      diagnosis: "Mild hypertension detected.",
-      treatment: "Prescribed lifestyle changes and monitoring.",
-    },
-    upcomingAppointments: [{ date: "2024-03-10", doctor: "Dr. Smith, Cardiologist" }],
+  useEffect(() => {
+    if (!userId) return;
+    
+    fetch(`/users/${userId}.json`)
+      .then((response) => {
+        if (!response.ok) throw new Error("User data not found");
+        return response.json();
+      })
+      .then((data) => setPatientData(data))
+      .catch((err) => console.error("Error loading patient data:", err));
+  }, [userId]);
+
+  const handleDownload = (file) => {
+    if (!file?.base64) return;
+    
+    const link = document.createElement("a");
+    link.href = file.base64;
+    link.download = file.name;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
+  const handlePreviewNavigation = (direction) => {
+    if (!previewFile || !patientData?.medicalHistory) return;
+    
+    const currentIndex = patientData.medicalHistory.findIndex(file => file.id === previewFile.id);
+    if (direction === "prev" && currentIndex < patientData.medicalHistory.length - 1) {
+      setPreviewFile(patientData.medicalHistory[currentIndex + 1]);
+    } else if (direction === "next" && currentIndex > 0) {
+      setPreviewFile(patientData.medicalHistory[currentIndex - 1]);
+    }
+  };
+
+  const toggleBase64View = () => setShowBase64((prev) => !prev);
+
+  if (!patientData) return <div className="text-center text-gray-600">Loading patient data...</div>;
+
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">User Dashboard</h1>
+    <div className="p-6 space-y-4">
+      {/* Patient Info */}
+      <div className="bg-white shadow-md p-4 rounded-lg text-center border">
+        <h2 className="text-xl font-bold">{patientData.name}</h2>
+        <p className="text-gray-500">Age: {patientData.age}</p>
+        <p className="text-gray-600">{patientData.condition}</p>
+        <p className="text-gray-600">Blood Type: {patientData.bloodType}</p>
+        <p className="text-gray-600">Gender: {patientData.gender}</p>
+        <p className="text-gray-600">Nationality: {patientData.nationality}</p>
+      </div>
 
-      {/* Medical Timeline */}
-      <Card>
-        <CardContent>
-          <h2 className="text-xl font-semibold mb-2">Medical Timeline</h2>
-          <ul className="list-disc ml-4">
-            {fakeUserData.medicalTimeline.map((event, index) => (
-              <li key={index}>{event.date} - {event.event}</li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
+      {/* Medical History */}
+      <div className="bg-white shadow-md p-4 rounded-md border">
+        <h2 className="text-xl font-bold">Medical History</h2>
+        <div className="flex flex-col space-y-2 mt-2">
+          {patientData.medicalHistory?.length ? (
+            patientData.medicalHistory.map((file) => (
+              <div key={file.id} className="p-2 border rounded-lg shadow flex justify-between items-center text-sm">
+                <div onClick={() => setPreviewFile(file)} className="cursor-pointer hover:text-blue-600">{file.name}</div>
+                <button onClick={() => handleDownload(file)} className="text-blue-600">Download</button>
+              </div>
+            ))
+          ) : (
+            <p className="text-gray-500">No medical history available.</p>
+          )}
+        </div>
+      </div>
 
-      {/* Health Metrics */}
-      <Card className="mt-4">
-        <CardContent>
-          <h2 className="text-xl font-semibold mb-2">Health Metrics</h2>
-          <p>Heart Rate: {fakeUserData.healthMetrics.heartRate} bpm</p>
-          <p>Blood Pressure: {fakeUserData.healthMetrics.bloodPressure}</p>
-          <p>Weight: {fakeUserData.healthMetrics.weight}</p>
-        </CardContent>
-      </Card>
-
-      {/* Medical Records (Switchable) */}
-      <Card className="mt-4">
-        <CardContent>
-          <h2 className="text-xl font-semibold mb-2">Medical Records</h2>
-          <div className="flex gap-2 mb-3">
-            <Button onClick={() => setActiveTab("labResults")}>Lab Results</Button>
-            <Button onClick={() => setActiveTab("diagnosis")}>Diagnosis</Button>
-            <Button onClick={() => setActiveTab("treatment")}>Treatment</Button>
+      {/* Preview Popup */}
+      {previewFile && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-4 rounded-2xl shadow-lg max-w-md w-full relative">
+            <button onClick={() => setPreviewFile(null)} className="absolute top-2 right-2 text-gray-500 hover:text-gray-700">✕</button>
+            <h3 className="text-lg font-semibold text-center mb-4">{previewFile.name}</h3>
+            <div className="flex items-center">
+              <button onClick={() => handlePreviewNavigation("prev")} className="text-gray-500 hover:text-gray-700 text-4xl disabled:opacity-50 mr-4">◄</button>
+              <div className="max-h-64 overflow-auto flex-1">
+                {showBase64 ? (
+                  <textarea className="w-full h-64 p-2 border rounded-md text-sm" value={previewFile.base64} readOnly />
+                ) : previewFile.type.startsWith("image/") ? (
+                  <img src={previewFile.base64} alt={previewFile.name} className="max-w-full h-auto" />
+                ) : (
+                  <iframe src={previewFile.base64} className="w-full h-64" title={previewFile.name} />
+                )}
+              </div>
+              <button onClick={() => handlePreviewNavigation("next")} className="text-gray-500 hover:text-gray-700 text-4xl disabled:opacity-50 ml-4">►</button>
+            </div>
+            <div className="mt-2 text-center">
+              <p className="text-sm text-gray-500">Uploaded: {previewFile.date}</p>
+              <button onClick={toggleBase64View} className="mt-2 bg-gray-200 text-gray-700 px-3 py-1 rounded-md hover:bg-gray-300 text-sm">
+                {showBase64 ? "Show Preview" : "Show Base64"}
+              </button>
+            </div>
           </div>
-          <p>{fakeUserData.medicalRecords[activeTab]}</p>
-        </CardContent>
-      </Card>
-
-      {/* Upcoming Appointments */}
-      <Card className="mt-4">
-        <CardContent>
-          <h2 className="text-xl font-semibold mb-2">Upcoming Appointments</h2>
-          <ul className="list-disc ml-4">
-            {fakeUserData.upcomingAppointments.map((appointment, index) => (
-              <li key={index}>{appointment.date} - {appointment.doctor}</li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
+        </div>
+      )}
     </div>
   );
-};
-
-export default UserDashboard;
+}

@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useLocation, useParams } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import UserDashboard from "./pages/UserDashboard";
 import DoctorDashboard from "./pages/DoctorDashboard";
@@ -7,13 +7,18 @@ import Help from "./pages/Help";
 import Login from "./pages/Login";
 import Settings from "./pages/Settings";
 
+const UserDashboardWrapper = () => {
+    const { userId } = useParams();
+    return <UserDashboard userId={userId} />;
+};
+
 const AppRoutes = () => {
     const location = useLocation();
-    
+
     return (
         <Routes key={location.pathname} location={location}>
             <Route path="/" element={<Login />} />
-            <Route path="/user-dashboard" element={<UserDashboard />} />
+            <Route path="/user-dashboard/:userId" element={<UserDashboardWrapper />} />
             <Route path="/doctor-dashboard" element={<DoctorDashboard />} />
             <Route path="/appointment" element={<Appointment />} />
             <Route path="/help" element={<Help />} />
