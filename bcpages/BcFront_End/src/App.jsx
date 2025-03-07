@@ -1,26 +1,33 @@
+import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
-import Dashboard from "./pages/Dashboard";
+import UserDashboard from "./pages/UserDashboard";
+import DoctorDashboard from "./pages/DoctorDashboard";
 import Appointment from "./pages/Appointment";
 import Help from "./pages/Help";
 import Login from "./pages/Login";
-import UserDashboard from "./pages/UserDashboard";
-import DoctorDashboard from "./pages/DoctorDashboard";
+import Settings from "./pages/Settings";
 
-function App() {
+const App = () => {
   return (
     <Router>
       <Navbar />
       <Routes>
-        <Route path="/" element={<Dashboard />} />
+        {/* Home redirects to login if not authenticated */}
+        <Route path="/" element={<Login />} />
+
+        {/* Dashboards */}
+        <Route path="/user-dashboard" element={<UserDashboard />} />
+        <Route path="/doctor-dashboard" element={<DoctorDashboard />} />
+
+        {/* Other Pages */}
         <Route path="/appointment" element={<Appointment />} />
         <Route path="/help" element={<Help />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/user-dashboard" element={<UserDashboard />} />
-        <Route path="/doctor-dashboard" element={<DoctorDashboard />} />
+        <Route path="/settings" element={<Settings />} />
       </Routes>
     </Router>
   );
-}
+};
 
 export default App;
