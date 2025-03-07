@@ -466,7 +466,7 @@ export class FHIRService {
    */
   static createMedicationRequest = async (prescriptionData: any, encounterId: string): Promise<any> => {
     try {
-      const medicationRequests = [];
+      const medicationRequests: any[] = [];
       
       for (const prescription of prescriptionData.prescriptions) {
         const medicationRequestId = uuidv4();
@@ -514,9 +514,9 @@ export class FHIRService {
     try {
       // 1. Create Encounter
       const encounter = await this.createEncounter({
-        patientId: reportData.patientId,
-        doctorId: reportData.doctorId,
-        hospitalId: reportData.hospitalId || (await this.getDoctorHospital(reportData.doctorId)),
+        patientId: reportData.patientId.toString(),
+        doctorId: reportData.doctorId.toString(),
+        hospitalId: (await this.getDoctorHospital(reportData.doctorId.toString())),
         date: reportData.date
       });
 
