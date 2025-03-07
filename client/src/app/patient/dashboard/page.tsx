@@ -243,6 +243,9 @@ const mockChartData = {
 export default function PatientDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
   const [selectedMedicalRecord, setSelectedMedicalRecord] = useState<MedicalRecord | null>(null);
+  const [showTokenModal, setShowTokenModal] = useState(false);
+  const [isGeneratingToken, setIsGeneratingToken] = useState(false);
+  const [generatedToken, setGeneratedToken] = useState<string | null>(null);
 
   const handleRecordSelect = (record: MedicalRecord) => {
     setSelectedMedicalRecord(record);
@@ -252,11 +255,144 @@ export default function PatientDashboard() {
     setSelectedMedicalRecord(null);
   };
 
+  const handleGenerateToken = () => {
+    setIsGeneratingToken(true);
+    // Simulate token generation
+    setTimeout(() => {
+      setIsGeneratingToken(false);
+      setGeneratedToken("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXRpZW50SWQiOiIxMjM0NTYiLCJleHBpcnkiOiIyMDI0LTA1LTMwVDIzOjU5OjU5WiJ9");
+    }, 1500);
+  };
+
+  const handleCopyToken = () => {
+    if (generatedToken) {
+      navigator.clipboard.writeText(generatedToken);
+      // Could add a toast notification here
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Background Pattern */}
       <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 -z-10" />
       <div className="absolute inset-0 opacity-30 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:20px_20px] -z-10" />
+      
+      {/* Token Generation Modal */}
+      {showTokenModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6 animate-in fade-in zoom-in duration-300">
+            <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Generate Access Token</h3>
+            
+            {!generatedToken ? (
+              <>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  Create a secure token to share your medical data with healthcare providers.
+                </p>
+                
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-2">Token Validity Period</label>
+                  <select className="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600">
+                    <option value="24h">24 hours</option>
+                    <option value="48h">48 hours</option>
+                    <option value="7d">7 days</option>
+                    <option value="30d">30 days</option>
+                  </select>
+                </div>
+                
+                <div className="mb-6">
+                  <label className="block text-sm font-medium mb-2">Data to Share</label>
+                  <div className="space-y-2">
+                    <div className="flex items-center">
+                      <input type="checkbox" id="share-vitals" className="mr-2" defaultChecked />
+                      <label htmlFor="share-vitals">Vital Signs</label>
+                    </div>
+                    <div className="flex items-center">
+                      <input type="checkbox" id="share-medications" className="mr-2" defaultChecked />
+                      <label htmlFor="share-medications">Medications</label>
+                    </div>
+                    <div className="flex items-center">
+                      <input type="checkbox" id="share-history" className="mr-2" defaultChecked />
+                      <label htmlFor="share-history">Medical History</label>
+                    </div>
+                    <div className="flex items-center">
+                      <input type="checkbox" id="share-lab" className="mr-2" defaultChecked />
+                      <label htmlFor="share-lab">Lab Results</label>
+                    </div>
+                    <div className="flex items-center">
+                      <input type="checkbox" id="share-risk" className="mr-2" />
+                      <label htmlFor="share-risk">Risk Assessments</label>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex justify-end gap-3">
+                  <Button variant="outline" onClick={() => setShowTokenModal(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleGenerateToken} 
+                    disabled={isGeneratingToken}
+                    className="relative"
+                  >
+                    {isGeneratingToken ? (
+                      <div className="flex items-center">
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Generating...
+                      </div>
+                    ) : "Generate Token"}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="animate-in fade-in duration-300">
+                <div className="flex items-center justify-center mb-4">
+                  <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                </div>
+                
+                <h4 className="text-center font-medium mb-2">Token Generated Successfully</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-4">
+                  Share this token with your healthcare provider
+                </p>
+                
+                <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-md mb-4 relative">
+                  <p className="text-sm font-mono break-all">{generatedToken}</p>
+                  <button 
+                    onClick={handleCopyToken}
+                    className="absolute top-2 right-2 p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600"
+                    aria-label="Copy token"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  </button>
+                </div>
+                
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md mb-6">
+                  <p className="text-sm text-blue-800 dark:text-blue-300">
+                    <span className="font-medium">Important:</span> This token grants temporary access to your medical data. Do not share it with unauthorized individuals.
+                  </p>
+                </div>
+                
+                <div className="flex justify-end">
+                  <Button onClick={() => {
+                    setShowTokenModal(false);
+                    setGeneratedToken(null);
+                  }}>
+                    Close
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       
       <div className="container mx-auto px-4 py-8">
         {/* Header Section */}
@@ -266,11 +402,16 @@ export default function PatientDashboard() {
             <p className="text-gray-600 dark:text-gray-400 mt-1">Welcome back, John Doe</p>
           </div>
           <div className="mt-4 md:mt-0 flex items-center gap-2">
-            <Button variant="outline" className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              Export Data
+            <Button 
+              className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-6 py-5 text-base shadow-lg hover:shadow-xl transition-all"
+              onClick={() => setShowTokenModal(true)}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+              </svg>
+              Generate Access Token
             </Button>
-            <Button className="flex items-center gap-2">
+            <Button variant="outline" className="flex items-center gap-2">
               <User className="h-4 w-4" />
               Profile
             </Button>
@@ -288,6 +429,31 @@ export default function PatientDashboard() {
           
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
+            {/* Prominent Token Generation Card */}
+            <Card className="bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 text-white hover:shadow-lg transition-all border-none mb-6">
+              <CardContent className="pt-6">
+                <div className="flex flex-col md:flex-row items-center justify-between">
+                  <div className="flex items-center mb-4 md:mb-0">
+                    <div className="bg-white/20 p-3 rounded-full mr-4">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold">Share Your Medical Data</h3>
+                      <p className="text-blue-100">Generate a secure access token for your healthcare providers</p>
+                    </div>
+                  </div>
+                  <Button 
+                    className="bg-white text-blue-600 hover:bg-blue-50 px-6 py-2 shadow-md"
+                    onClick={() => setShowTokenModal(true)}
+                  >
+                    Generate Token
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+            
             {/* Health Metrics Grid */}
             <div className="">
               <HealthMetricsGrid metrics={healthMetrics} />
