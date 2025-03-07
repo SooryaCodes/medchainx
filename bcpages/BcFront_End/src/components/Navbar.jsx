@@ -58,6 +58,9 @@ const Navbar = () => {
           <Link to="/help" className="text-gray-800 hover:text-blue-500" onClick={toggleSidebar}>
             Help
           </Link>
+          <Link to="/blockchain" className="text-gray-800 hover:text-blue-500" onClick={toggleSidebar}>
+            Blockchain
+          </Link> {/* Add the new link */}
         </div>
       </div>
 
