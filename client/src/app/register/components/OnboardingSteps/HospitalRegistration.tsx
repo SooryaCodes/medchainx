@@ -13,6 +13,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 type HospitalRegistrationProps = {
   step: number;
   setStep: (step: number) => void;
+  handleNext: () => void;
+  handleBack: () => void;
 };
 
 export default function HospitalRegistration({ step, setStep }: HospitalRegistrationProps) {

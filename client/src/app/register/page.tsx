@@ -40,6 +40,27 @@ export default function RegisterPage() {
     }
   };
 
+  const renderNavigationButtons = () => (
+    <div className="flex justify-between mt-12">
+      <Button 
+        onClick={handleBack} 
+        variant="outline"
+        className="gap-2 border-blue-200 hover:bg-blue-50 dark:border-blue-800 dark:hover:bg-blue-900/30"
+      >
+        <ChevronLeft className="h-4 w-4" />
+        {step === 1 ? "Change Type" : "Previous"}
+      </Button>
+      
+      <Button 
+        onClick={step === maxSteps ? handleSubmit : handleNext}
+        className="gap-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 shadow-md hover:shadow-lg transition-all duration-300"
+      >
+        {step === maxSteps ? "Complete Registration" : "Continue"}
+        {step !== maxSteps && <ChevronRight className="h-4 w-4" />}
+      </Button>
+    </div>
+  );
+
   return (
     <div className="flex min-h-screen">
       {/* Left Column - Blue Section with Branding */}
@@ -102,35 +123,31 @@ export default function RegisterPage() {
               </div>
               
               {userType === "patient" && (
-                <PatientRegistration step={step} setStep={setStep} />
+                <PatientRegistration 
+                  step={step} 
+                  setStep={setStep} 
+                  handleNext={handleNext} 
+                  handleBack={handleBack} 
+                />
               )}
               
               {userType === "doctor" && (
-                <DoctorRegistration step={step} setStep={setStep} />
+                <DoctorRegistration 
+                  step={step} 
+                  setStep={setStep} 
+                  handleNext={handleNext} 
+                  handleBack={handleBack} 
+                />
               )}
               
               {userType === "hospital" && (
-                <HospitalRegistration step={step} setStep={setStep} />
+                <HospitalRegistration 
+                  step={step} 
+                  setStep={setStep} 
+                  handleNext={handleNext} 
+                  handleBack={handleBack} 
+                />
               )}
-              
-              <div className="flex justify-between mt-12">
-                <Button 
-                  onClick={handleBack} 
-                  variant="outline"
-                  className="gap-2 border-blue-200 hover:bg-blue-50 dark:border-blue-800 dark:hover:bg-blue-900/30"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  {step === 1 ? "Change Type" : "Previous"}
-                </Button>
-                
-                <Button 
-                  onClick={step === maxSteps ? handleSubmit : handleNext}
-                  className="gap-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 shadow-md hover:shadow-lg transition-all duration-300"
-                >
-                  {step === maxSteps ? "Complete Registration" : "Continue"}
-                  {step !== maxSteps && <ChevronRight className="h-4 w-4" />}
-                </Button>
-              </div>
             </div>
           )}
         </div>

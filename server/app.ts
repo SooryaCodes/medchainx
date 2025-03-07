@@ -31,7 +31,7 @@ mongoose.connect(process.env.MONGODB_URI as string)
 
 // Middleware
 app.use(cors({
-  origin: process.env.CLIENT_URL,
+  origin: "http://localhost:3000",
   credentials: true
 }));
 app.use(express.json());

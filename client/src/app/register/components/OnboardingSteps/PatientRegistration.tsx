@@ -22,7 +22,8 @@ const patientSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
   lastName: z.string().min(2, 'Last name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
-  phone: z.string().regex(/^\+?[1-9]\d{9,14}$/, 'Invalid phone number'),
+  phone: z.string()
+    .regex(/^\+?[1-9]\d{9,14}$/, 'Phone number must start with a "+" followed by 9 to 14 digits.'),
   dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format'),
   gender: z.enum(['male', 'female', 'other']),
   address: z.object({
@@ -42,10 +43,12 @@ const patientSchema = z.object({
   nationalId: z.string().min(8, 'Valid national ID is required')
 });
 
-interface Props {
+type Props = {
   step: number;
   setStep: (step: number) => void;
-}
+  handleNext: () => void;
+  handleBack: () => void;
+};
 
 export default function PatientRegistration({ step, setStep }: Props) {
   const router = useRouter();
@@ -58,9 +61,10 @@ export default function PatientRegistration({ step, setStep }: Props) {
     trigger,
     formState: { errors },
     watch,
+    setValue,
   } = useForm<PatientRegistrationData>({
     resolver: zodResolver(patientSchema),
-    mode: 'onChange',
+    mode: 'onSubmit',
   });
 
   const validateStep1 = async () => {
@@ -105,12 +109,12 @@ export default function PatientRegistration({ step, setStep }: Props) {
         }
       };
 
-      const response = await axiosInstance.post<RegistrationResponse>('/patients/register', formattedData);
+      const response = await axiosInstance.post<RegistrationResponse>('/patient/register', formattedData);
       
       if (response.data.success) {
         const { token, patientId } = response.data.data;
         setAuthCookies(token, patientId);
-        router.push('/dashboard');
+        router.push('/patient/dashboard');
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
@@ -119,7 +123,7 @@ export default function PatientRegistration({ step, setStep }: Props) {
     }
   };
 
-  const renderStep1 = () => (
+  const Step1 = ({ register, errors, validateStep1 }: any) => (
     <div className="space-y-4">
       <div className="flex items-center gap-3 mb-6">
         <UserIcon className="h-6 w-6 text-blue-600" />
@@ -220,7 +224,7 @@ export default function PatientRegistration({ step, setStep }: Props) {
     </div>
   );
 
-  const renderStep2 = () => (
+  const Step2 = ({ register, errors, validateStep2, setValue }: any) => (
     <div className="space-y-4">
       <div className="flex items-center gap-3 mb-6">
         <Heart className="h-6 w-6 text-blue-600" />
@@ -242,7 +246,7 @@ export default function PatientRegistration({ step, setStep }: Props) {
 
         <div className="space-y-2">
           <Label htmlFor="gender">Gender</Label>
-          <Select onValueChange={(value) => register('gender').onChange({ target: { value } })}>
+          <Select onValueChange={(value) => setValue('gender', value as 'male' | 'female' | 'other')}>
             <SelectTrigger className="border-blue-200 bg-white dark:bg-gray-800">
               <SelectValue placeholder="Select gender" />
             </SelectTrigger>
@@ -259,7 +263,7 @@ export default function PatientRegistration({ step, setStep }: Props) {
 
         <div className="space-y-2">
           <Label htmlFor="bloodType">Blood Type</Label>
-          <Select onValueChange={(value) => register('bloodType').onChange({ target: { value } })}>
+          <Select onValueChange={(value) => setValue('bloodType', value as 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-')}>
             <SelectTrigger className="border-blue-200 bg-white dark:bg-gray-800">
               <SelectValue placeholder="Select blood type" />
             </SelectTrigger>
@@ -312,7 +316,7 @@ export default function PatientRegistration({ step, setStep }: Props) {
     </div>
   );
 
-  const renderStep3 = () => (
+  const Step3 = ({ register, errors, isLoading, onSubmit, setStep }: any) => (
     <div className="space-y-4">
       <div className="flex items-center gap-3 mb-6">
         <MapPin className="h-6 w-6 text-blue-600" />
@@ -467,9 +471,9 @@ export default function PatientRegistration({ step, setStep }: Props) {
             </div>
           )}
           
-          {step === 1 && renderStep1()}
-          {step === 2 && renderStep2()}
-          {step === 3 && renderStep3()}
+          {step === 1 && <Step1 register={register} errors={errors} validateStep1={validateStep1} />}
+          {step === 2 && <Step2 register={register} errors={errors} validateStep2={validateStep2} setValue={setValue} />}
+          {step === 3 && <Step3 register={register} errors={errors} isLoading={isLoading} onSubmit={onSubmit} setStep={setStep} />}
         </CardContent>
       </Card>
     </form>

@@ -11,6 +11,8 @@ import { Switch } from "@/components/ui/switch";
 type DoctorRegistrationProps = {
   step: number;
   setStep: (step: number) => void;
+  handleNext: () => void;
+  handleBack: () => void;
 };
 
 export default function DoctorRegistration({ step, setStep }: DoctorRegistrationProps) {
