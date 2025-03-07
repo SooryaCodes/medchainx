@@ -18,7 +18,8 @@ import {
   User,
   BarChart3,
   PieChart,
-  Wind
+  Wind,
+  LogOut
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardCard } from "@/components/ui/dashboard-card";
@@ -30,6 +31,8 @@ import { MedicalRecordDetail } from "@/components/features/medical-history/Medic
 import { HealthMetricsGrid } from "@/components/features/dashboard/HealthMetricsGrid";
 import { HealthCharts } from "@/components/features/dashboard/HealthCharts";
 import { AiHealthInsights } from "@/components/features/dashboard/AiHealthInsights";
+import { usePatient } from "@/context/PatientContext";
+import { useRouter } from "next/navigation";
 
 // Define interface for medical record
 interface MedicalRecord {
@@ -241,13 +244,16 @@ const mockChartData = {
 };
 
 export default function PatientDashboard() {
+  // Use the patient context
+  const { patient, loading, error, logout, token, remainingTime, setRemainingTime } = usePatient();
+  const router = useRouter();
+  
   const [activeTab, setActiveTab] = useState("overview");
   const [selectedMedicalRecord, setSelectedMedicalRecord] = useState<MedicalRecord | null>(null);
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [isGeneratingToken, setIsGeneratingToken] = useState(false);
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
   const [tokenExpiry, setTokenExpiry] = useState<Date | null>(null);
-  const [remainingTime, setRemainingTime] = useState<string>("");
   const [tokenCreationTime, setTokenCreationTime] = useState<Date | null>(null);
   const [originalDuration, setOriginalDuration] = useState<number>(60 * 60 * 1000); // Default 1h
 
@@ -372,7 +378,7 @@ export default function PatientDashboard() {
         setGeneratedToken(null);
         setTokenExpiry(null);
         setTokenCreationTime(null);
-        setRemainingTime("");
+        setRemainingTime(null);
         // Clear cookies
         document.cookie = "medToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
         document.cookie = "medTokenExpiry=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
@@ -430,11 +436,65 @@ export default function PatientDashboard() {
     // Don't reset token state, just close the modal
   };
 
+  // Add a logout button in the header
+  const renderHeader = () => (
+    <div className="flex justify-between items-center mb-6">
+      <h1 className="text-3xl font-bold">Patient Dashboard</h1>
+      <div className="flex items-center gap-4">
+        <div className="flex items-center">
+          <User className="mr-2" />
+          {patient ? `${patient.name.given.join(' ')} ${patient.name.family}` : 'Loading...'}
+        </div>
+        <Button variant="outline" onClick={logout} className="flex items-center gap-2">
+          <LogOut size={16} />
+          Logout
+        </Button>
+      </div>
+    </div>
+  );
+  
+  // Add MedChainX branding
+  const renderMedChainX = () => (
+    <div className="mb-6 p-4 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg text-white">
+      <h2 className="text-2xl font-bold">MedChainX</h2>
+      <p>Your secure blockchain-based medical records platform</p>
+    </div>
+  );
+  
+  // If loading, show loading state
+  if (loading) {
+    return (
+      <div className="container mx-auto p-6">
+        {renderHeader()}
+        <div className="flex items-center justify-center h-[60vh]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-lg">Loading your medical data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  // If error, show error state
+  if (error) {
+    return (
+      <div className="container mx-auto p-6">
+        {renderHeader()}
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-red-700 mb-2">Error Loading Data</h2>
+          <p className="text-red-600 mb-4">{error}</p>
+          <Button onClick={() => window.location.reload()}>Try Again</Button>
+        </div>
+      </div>
+    );
+  }
+  
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 -z-10" />
-      <div className="absolute inset-0 opacity-30 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:20px_20px] -z-10" />
+    <div className="container mx-auto p-6">
+      {renderHeader()}
+      {renderMedChainX()}
       
       {/* Token Generation Modal */}
       {showTokenModal && (
