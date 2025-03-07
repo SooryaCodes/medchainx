@@ -1,13 +1,11 @@
 "use client";
 import { useState } from "react";
-import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import UserTypeSelection from "./components/UserTypeSelection";
 import PatientRegistration from "./components/OnboardingSteps/PatientRegistration";
 import DoctorRegistration from "./components/OnboardingSteps/DoctorRegistration";
 import HospitalRegistration from "./components/OnboardingSteps/HospitalRegistration";
-import AppFeatures from "./components/AppFeatures";
 import RegistrationHeader from "./components/RegistrationHeader";
 
 export default function RegisterPage() {
@@ -41,72 +39,113 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-blue-950">
-      <RegistrationHeader />
-      
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-          {/* Left Column - App Features */}
-          <div className="hidden lg:block">
-            <AppFeatures />
-          </div>
+    <div className="flex min-h-screen">
+      {/* Left Column - Blue Section with Branding */}
+      <div className="hidden lg:flex lg:w-2/5 bg-blue-600 flex-col p-12 relative overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:20px_20px]"></div>
+        
+        <div className="relative z-10">
+          <h1 className="text-white text-4xl font-bold mb-4">MedChainX</h1>
+          <p className="text-blue-100 text-lg mb-12">Next-Generation Healthcare Platform</p>
           
-          {/* Right Column - Registration Form */}
-          <div className="w-full max-w-2xl mx-auto lg:mx-0">
-            {!userType ? (
-              <UserTypeSelection onSelect={handleUserTypeSelect} />
-            ) : (
-              <div className="space-y-6">
-                <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
-                  <div className="flex justify-between items-center mb-2">
-                    <h2 className="text-lg font-medium text-gray-900 dark:text-white">
-                      {userType === "patient" && "Patient Registration"}
-                      {userType === "doctor" && "Doctor Registration"}
-                      {userType === "hospital" && "Hospital Registration"}
-                    </h2>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">Step {step} of {maxSteps}</span>
-                  </div>
-                  <div className="h-2 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-blue-600 transition-all duration-300 rounded-full"
-                      style={{ width: `${(step / maxSteps) * 100}%` }}
-                    ></div>
-                  </div>
-                </div>
-                
-                {userType === "patient" && (
-                  <PatientRegistration step={step} setStep={setStep} />
-                )}
-                
-                {userType === "doctor" && (
-                  <DoctorRegistration step={step} setStep={setStep} />
-                )}
-                
-                {userType === "hospital" && (
-                  <HospitalRegistration step={step} setStep={setStep} />
-                )}
-                
-                <div className="flex justify-between mt-8">
-                  <Button 
-                    onClick={handleBack} 
-                    variant="outline"
-                    className="gap-2"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    {step === 1 ? "Change Type" : "Previous"}
-                  </Button>
-                  
-                  <Button 
-                    onClick={step === maxSteps ? handleSubmit : handleNext}
-                    className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                  >
-                    {step === maxSteps ? "Complete Registration" : "Continue"}
-                    {step !== maxSteps && <ChevronRight className="h-4 w-4" />}
-                  </Button>
+          <div className="mt-12">
+            <h2 className="text-white text-5xl font-bold leading-tight mb-6">
+              Start your healthcare journey with us.
+            </h2>
+            <p className="text-blue-100 text-xl mb-8">
+              Discover the world's most advanced EMR solution for patients, doctors, and hospitals.
+            </p>
+            
+            {/* Testimonial Card */}
+            <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl border border-white/20 mt-12">
+              <p className="text-white italic mb-4">
+                "MedChainX has revolutionized how we manage patient records. The platform is intuitive and secure."
+              </p>
+              <div className="flex items-center">
+                <div className="w-10 h-10 rounded-full bg-blue-500 mr-3"></div>
+                <div>
+                  <p className="text-white font-medium">Dr. Sarah Johnson</p>
+                  <p className="text-blue-200 text-sm">Chief Medical Officer</p>
                 </div>
               </div>
-            )}
+            </div>
           </div>
+        </div>
+        
+        {/* Bottom Section */}
+        <div className="mt-auto pt-8">
+          <div className="flex space-x-2">
+            {[...Array(3)].map((_, i) => (
+              <div 
+                key={i} 
+                className={`h-2 rounded-full ${i === 0 ? 'w-8 bg-white' : 'w-2 bg-white/40'}`}
+              ></div>
+            ))}
+          </div>
+        </div>
+      </div>
+      
+      {/* Right Column - Registration Form */}
+      <div className="w-full lg:w-3/5 bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-blue-950">
+        <RegistrationHeader />
+        
+        <div className="max-w-2xl mx-auto px-6 py-12">
+          {!userType ? (
+            <UserTypeSelection onSelect={handleUserTypeSelect} />
+          ) : (
+            <div className="space-y-8">
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-blue-100 dark:border-blue-900/30">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {userType === "patient" && "Patient Registration"}
+                    {userType === "doctor" && "Doctor Registration"}
+                    {userType === "hospital" && "Hospital Registration"}
+                  </h2>
+                  <span className="text-sm font-medium px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">
+                    Step {step} of {maxSteps}
+                  </span>
+                </div>
+                <div className="h-2 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-500 rounded-full"
+                    style={{ width: `${(step / maxSteps) * 100}%` }}
+                  ></div>
+                </div>
+              </div>
+              
+              {userType === "patient" && (
+                <PatientRegistration step={step} setStep={setStep} />
+              )}
+              
+              {userType === "doctor" && (
+                <DoctorRegistration step={step} setStep={setStep} />
+              )}
+              
+              {userType === "hospital" && (
+                <HospitalRegistration step={step} setStep={setStep} />
+              )}
+              
+              <div className="flex justify-between mt-12">
+                <Button 
+                  onClick={handleBack} 
+                  variant="outline"
+                  className="gap-2 border-blue-200 hover:bg-blue-50 dark:border-blue-800 dark:hover:bg-blue-900/30"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  {step === 1 ? "Change Type" : "Previous"}
+                </Button>
+                
+                <Button 
+                  onClick={step === maxSteps ? handleSubmit : handleNext}
+                  className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md hover:shadow-lg transition-all duration-300"
+                >
+                  {step === maxSteps ? "Complete Registration" : "Continue"}
+                  {step !== maxSteps && <ChevronRight className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
