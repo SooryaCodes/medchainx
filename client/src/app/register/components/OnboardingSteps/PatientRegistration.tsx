@@ -236,8 +236,21 @@ export default function PatientRegistration({ step, setStep }: PatientRegistrati
   );
 
   return (
-    <Card className="border-blue-100 dark:border-blue-900">
-      <CardContent className="p-6">
+    <Card className="border-0 shadow-lg bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm dark:from-gray-900/80 dark:to-gray-800/60">
+      <CardContent className="p-8">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-primary">
+            {step === 1 && "Personal Information"}
+            {step === 2 && "Contact Information"}
+            {step === 3 && "Medical Information"}
+          </h2>
+          <p className="text-muted-foreground mt-1">
+            {step === 1 && "Please provide your basic personal details"}
+            {step === 2 && "How can we reach you?"}
+            {step === 3 && "Important health information for your records"}
+          </p>
+        </div>
+        
         {step === 1 && renderStep1()}
         {step === 2 && renderStep2()}
         {step === 3 && renderStep3()}
