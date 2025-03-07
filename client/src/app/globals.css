@@ -40,73 +40,118 @@
 }
 
 :root {
-  /* 🌟 Blue Theme Applied */
-  --background: oklch(1 0 0); /* White */
-  --foreground: oklch(0.15 0.02 260); /* Dark Blue for Text */
-  --card: oklch(0.95 0.01 250); /* Light Blue Gray */
-  --card-foreground: oklch(0.1 0.01 260);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.141 0.005 285.823);
-
-  /* ✅ Primary Theme Color - BLUE */
-  --primary: oklch(0.3 0.1 260); /* Deep Blue */
-  --primary-foreground: oklch(1 0 0); /* White text on Primary */
-
-  /* ✅ Secondary Theme Color */
-  --secondary: oklch(0.85 0.05 260); /* Light Blue */
-  --secondary-foreground: oklch(0.2 0.02 260); /* Dark Blue */
-
-  /* ✅ Accent Colors */
-  --accent: oklch(0.7 0.12 260); /* Medium Blue */
-  --accent-foreground: oklch(0.1 0.02 260); /* Darker Blue */
-
-  /* ✅ Muted Colors */
-  --muted: oklch(0.9 0.02 250);
-  --muted-foreground: oklch(0.4 0.03 250);
-
-  /* ✅ Borders and Inputs */
-  --border: oklch(0.8 0.02 260); /* Soft Blue Border */
-  --input: oklch(0.85 0.02 260); /* Light Blue Input */
-
-  /* ✅ Remove Box Shadows */
-  --ring: oklch(0 0 0 / 0); /* No ring */
-  --color-sidebar-ring: oklch(0 0 0 / 0); /* No sidebar ring */
-  --color-sidebar-border: oklch(0.85 0.02 260); /* Blue-tinted sidebar */
-  --color-sidebar-accent: oklch(0.6 0.08 260);
-
-  /* ✅ Borders & Radius */
-  --radius: 0.625rem; /* Keep this for rounded corners */
+  /* Modern Gradient Background */
+  --background: linear-gradient(135deg, #f0f7ff, #e6f0ff);
+  --foreground: #1a365d;
+  
+  /* Card Elements */
+  --card: rgba(255, 255, 255, 0.9);
+  --card-foreground: #2d3748;
+  
+  /* Primary Theme - Medical Blue */
+  --primary: oklch(0.55 0.18 260);
+  --primary-foreground: oklch(0.98 0.005 260);
+  
+  /* Secondary Theme */
+  --secondary: oklch(0.85 0.07 260);
+  --secondary-foreground: oklch(0.2 0.1 260);
+  
+  /* Accent Colors */
+  --accent: oklch(0.75 0.12 220);
+  --accent-foreground: oklch(0.1 0.05 220);
+  
+  /* Muted Colors */
+  --muted: oklch(0.96 0.03 250);
+  --muted-foreground: oklch(0.5 0.05 250);
+  
+  /* Borders and Inputs */
+  --border: oklch(0.85 0.05 260);
+  --input: oklch(0.9 0.03 260);
+  
+  /* Subtle Shadows */
+  --ring: oklch(0.6 0.1 260 / 0.3);
+  
+  /* Sidebar Styling */
+  --color-sidebar: oklch(0.98 0.02 260);
+  --color-sidebar-foreground: oklch(0.3 0.1 260);
+  --color-sidebar-border: oklch(0.85 0.05 260);
+  --color-sidebar-accent: oklch(0.7 0.15 260);
+  
+  /* Radius */
+  --radius: 0.75rem;
 }
 
 .dark {
-  --background: oklch(0.12 0.02 260);
-  --foreground: oklch(1 0 0);
-  --card: oklch(0.15 0.03 260);
-  --card-foreground: oklch(0.9 0.02 260);
-  --popover: oklch(0.15 0.03 260);
-  --popover-foreground: oklch(0.9 0.02 260);
-
+  --background: linear-gradient(135deg, #0f172a, #1e293b);
+  --foreground: #f8fafc;
+  
+  /* Dark Mode Cards */
+  --card: rgba(30, 41, 59, 0.8);
+  --card-foreground: #e2e8f0;
+  
   /* Dark Mode Primary */
-  --primary: oklch(0.85 0.08 260);
-  --primary-foreground: oklch(0.1 0.02 260);
-
+  --primary: oklch(0.7 0.15 260);
+  --primary-foreground: oklch(0.1 0.05 260);
+  
   /* Dark Mode Secondary */
-  --secondary: oklch(0.6 0.05 260);
-  --secondary-foreground: oklch(0.9 0.02 260);
-
+  --secondary: oklch(0.4 0.1 260);
+  --secondary-foreground: oklch(0.9 0.05 260);
+  
   /* Dark Mode Accent */
-  --accent: oklch(0.65 0.1 260);
-  --accent-foreground: oklch(0.1 0.02 260);
-
+  --accent: oklch(0.6 0.15 220);
+  --accent-foreground: oklch(0.95 0.03 220);
+  
+  /* Dark Mode Muted */
+  --muted: oklch(0.3 0.05 260);
+  --muted-foreground: oklch(0.7 0.05 260);
+  
   /* Dark Mode Borders */
-  --border: oklch(0.4 0.02 260);
-  --input: oklch(0.5 0.02 260);
-  --ring: oklch(0 0 0 / 0);
+  --border: oklch(0.35 0.05 260);
+  --input: oklch(0.3 0.05 260);
+  
+  /* Dark Mode Sidebar */
+  --color-sidebar: oklch(0.2 0.05 260);
+  --color-sidebar-foreground: oklch(0.8 0.05 260);
+}
+
+/* Add subtle patterns and texture */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%234299e1' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Enhanced Card Styling */
+.card {
+  @apply shadow-lg rounded-xl border border-border backdrop-blur-sm transition-all duration-300 hover:shadow-xl;
+  background: linear-gradient(to bottom right, var(--card), rgba(255, 255, 255, 0.8));
+}
+
+/* Button Enhancements */
+.btn-primary {
+  @apply bg-primary text-primary-foreground shadow-md hover:shadow-lg transition-all duration-300;
+  background: linear-gradient(to right, var(--primary), oklch(0.5 0.2 240));
+}
+
+/* Form Element Styling */
+input, select, textarea {
+  @apply border-input bg-white/50 backdrop-blur-sm focus:border-primary/50 focus:ring-primary/20;
+}
+
+/* Add glass morphism effect to containers */
+.glass-container {
+  @apply bg-white/30 backdrop-blur-md border border-white/30 shadow-lg rounded-xl;
 }
 
 @layer base {
   * {
-    @apply border-border outline-none; /* ✅ Removed Ring Outline */
+    @apply border-border outline-none;
   }
   body {
     @apply bg-background text-foreground;
