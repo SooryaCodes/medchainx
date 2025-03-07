@@ -8,6 +8,7 @@ export default function DoctorDashboard() {
   const [selectedFiles, setSelectedFiles] = useState(new Set());
   const [previewFile, setPreviewFile] = useState(null);
   const [doctorNotes, setDoctorNotes] = useState("");
+  const [showBase64, setShowBase64] = useState(false); // New state for toggle
 
   const fakePatientData = {
     name: "John Doe",
@@ -32,27 +33,42 @@ export default function DoctorDashboard() {
     setSelectedFile(e.dataTransfer.files[0]);
   };
 
-  const handleUpload = () => {
+  const fileToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  const handleUpload = async () => {
     if (!selectedFile) {
       alert("No file selected");
       return;
     }
 
-    const newFile = {
-      id: Date.now(),
-      name: selectedFile.name,
-      type: selectedFile.type,
-      date: new Date().toLocaleString(),
-      url: URL.createObjectURL(selectedFile),
-      isUploaded: false,
-    };
+    try {
+      const base64Data = await fileToBase64(selectedFile);
+      const newFile = {
+        id: Date.now(),
+        name: selectedFile.name,
+        type: selectedFile.type,
+        date: new Date().toLocaleString(),
+        base64: base64Data,
+        isUploaded: false,
+      };
 
-    setUploadedFiles([newFile, ...uploadedFiles]);
-    setSelectedFile(null);
-    alert("File added to history!");
+      setUploadedFiles([newFile, ...uploadedFiles]);
+      setSelectedFile(null);
+      alert("File added to history!");
+    } catch (error) {
+      console.error("Error converting file to Base64:", error);
+      alert("Failed to process file");
+    }
   };
 
-  const handleSaveNotes = () => {
+  const handleSaveNotes = async () => {
     if (!doctorNotes.trim()) {
       alert("Note is empty");
       return;
@@ -61,18 +77,24 @@ export default function DoctorDashboard() {
     const noteBlob = new Blob([doctorNotes], { type: "text/plain" });
     const noteFile = new File([noteBlob], `Doctor_Note_${Date.now()}.txt`, { type: "text/plain" });
 
-    const newFile = {
-      id: Date.now(),
-      name: noteFile.name,
-      type: "text/plain",
-      date: new Date().toLocaleString(),
-      url: URL.createObjectURL(noteFile),
-      isUploaded: false,
-    };
+    try {
+      const base64Data = await fileToBase64(noteFile);
+      const newFile = {
+        id: Date.now(),
+        name: noteFile.name,
+        type: "text/plain",
+        date: new Date().toLocaleString(),
+        base64: base64Data,
+        isUploaded: false,
+      };
 
-    setUploadedFiles([newFile, ...uploadedFiles]);
-    setDoctorNotes("");
-    alert("Doctor's note saved to history!");
+      setUploadedFiles([newFile, ...uploadedFiles]);
+      setDoctorNotes("");
+      alert("Doctor's note saved to history!");
+    } catch (error) {
+      console.error("Error converting note to Base64:", error);
+      alert("Failed to save note");
+    }
   };
 
   const handleDeleteFile = (fileId) => {
@@ -112,6 +134,10 @@ export default function DoctorDashboard() {
     } else if (direction === 'next' && currentIndex > 0) {
       setPreviewFile(uploadedFiles[currentIndex - 1]);
     }
+  };
+
+  const toggleBase64View = () => {
+    setShowBase64(prev => !prev);
   };
 
   return (
@@ -213,10 +239,16 @@ export default function DoctorDashboard() {
                     ◄
                   </button>
                   <div className="max-h-64 overflow-auto flex-1">
-                    {previewFile.type.startsWith('image/') ? (
-                      <img src={previewFile.url} alt={previewFile.name} className="max-w-full h-auto" />
+                    {showBase64 ? (
+                      <textarea
+                        className="w-full h-64 p-2 border rounded-md text-sm"
+                        value={previewFile.base64}
+                        readOnly
+                      />
+                    ) : previewFile.type.startsWith('image/') ? (
+                      <img src={previewFile.base64} alt={previewFile.name} className="max-w-full h-auto" />
                     ) : (
-                      <iframe src={previewFile.url} className="w-full h-64" title={previewFile.name} />
+                      <iframe src={previewFile.base64} className="w-full h-64" title={previewFile.name} />
                     )}
                   </div>
                   <button
@@ -227,7 +259,15 @@ export default function DoctorDashboard() {
                     ►
                   </button>
                 </div>
-                <p className="text-sm text-gray-500 mt-2 text-center">Uploaded: {previewFile.date}</p>
+                <div className="mt-2 text-center">
+                  <p className="text-sm text-gray-500">Uploaded: {previewFile.date}</p>
+                  <button
+                    onClick={toggleBase64View}
+                    className="mt-2 bg-gray-200 text-gray-700 px-3 py-1 rounded-md hover:bg-gray-300 text-sm"
+                  >
+                    {showBase64 ? "Show Preview" : "Show Base64"}
+                  </button>
+                </div>
               </div>
             </div>
           )}
