@@ -15,42 +15,42 @@ import { Card, CardContent } from "@/components/ui/card";
 
 const features = [
   {
-    icon: <HeartPulse className="h-8 w-8 text-primary" />,
+    icon: <HeartPulse className="h-8 w-8 text-blue-600" />,
     title: "Comprehensive Records",
     description: "Store complete patient histories in one secure location with easy access and management."
   },
   {
-    icon: <Shield className="h-8 w-8 text-primary" />,
+    icon: <Shield className="h-8 w-8 text-blue-600" />,
     title: "Advanced Security",
     description: "HIPAA-compliant data protection with end-to-end encryption for all medical records."
   },
   {
-    icon: <Clock className="h-8 w-8 text-primary" />,
+    icon: <Clock className="h-8 w-8 text-blue-600" />,
     title: "Real-time Updates",
     description: "Instant synchronization across all devices ensures your data is always current."
   },
   {
-    icon: <Users className="h-8 w-8 text-primary" />,
+    icon: <Users className="h-8 w-8 text-blue-600" />,
     title: "Team Collaboration",
     description: "Seamless coordination between healthcare providers for better patient care."
   },
   {
-    icon: <Zap className="h-8 w-8 text-primary" />,
+    icon: <Zap className="h-8 w-8 text-blue-600" />,
     title: "Fast Performance",
     description: "Lightning-fast access to medical records when you need them most."
   },
   {
-    icon: <Globe className="h-8 w-8 text-primary" />,
+    icon: <Globe className="h-8 w-8 text-blue-600" />,
     title: "Global Access",
     description: "Access your medical information securely from anywhere in the world."
   },
   {
-    icon: <Lock className="h-8 w-8 text-primary" />,
+    icon: <Lock className="h-8 w-8 text-blue-600" />,
     title: "Privacy Controls",
     description: "Granular permission settings to control who can access your medical data."
   },
   {
-    icon: <FileText className="h-8 w-8 text-primary" />,
+    icon: <FileText className="h-8 w-8 text-blue-600" />,
     title: "Digital Prescriptions",
     description: "Generate and manage prescriptions digitally with automatic refill reminders."
   }
@@ -70,15 +70,15 @@ export default function AppFeatures() {
   return (
     <div className="space-y-8">
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-3">
+        <h1 className="text-3xl font-bold text-blue-600 mb-3">
           Welcome to MedChainX
         </h1>
-        <p className="text-muted-foreground max-w-md mx-auto">
+        <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto">
           The next generation healthcare management platform designed for patients, doctors, and hospitals
         </p>
       </div>
       
-      <div className="relative h-[400px] overflow-hidden rounded-2xl">
+      <div className="relative h-[400px] overflow-hidden rounded-xl shadow-lg">
         <div 
           className="transition-transform duration-500 ease-in-out h-full"
           style={{ transform: `translateY(-${activeIndex * 100}%)` }}
@@ -86,16 +86,16 @@ export default function AppFeatures() {
           {features.map((feature, index) => (
             <Card 
               key={index} 
-              className={`absolute inset-0 border-0 shadow-lg bg-gradient-to-br from-white/90 to-white/70 backdrop-blur-sm dark:from-gray-800/90 dark:to-gray-800/70 transition-opacity duration-500 ${
+              className={`absolute inset-0 border-0 bg-white dark:bg-gray-800 transition-opacity duration-500 ${
                 index === activeIndex ? "opacity-100 z-10" : "opacity-0 z-0"
               }`}
             >
               <CardContent className="flex flex-col items-center justify-center h-full p-8 text-center">
-                <div className="bg-blue-100 dark:bg-blue-900/30 rounded-full p-6 mb-6">
+                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-full p-6 mb-6">
                   {feature.icon}
                 </div>
-                <h3 className="text-2xl font-semibold text-primary mb-4">{feature.title}</h3>
-                <p className="text-muted-foreground max-w-md">{feature.description}</p>
+                <h3 className="text-2xl font-semibold text-blue-600 dark:text-blue-400 mb-4">{feature.title}</h3>
+                <p className="text-gray-600 dark:text-gray-400 max-w-md">{feature.description}</p>
               </CardContent>
             </Card>
           ))}
@@ -108,7 +108,7 @@ export default function AppFeatures() {
             key={index}
             className={`w-2 h-2 rounded-full transition-all ${
               index === activeIndex 
-                ? "bg-primary w-6" 
+                ? "bg-blue-600 w-6" 
                 : "bg-gray-300 dark:bg-gray-700"
             }`}
             onClick={() => setActiveIndex(index)}

@@ -57,16 +57,21 @@ export default function RegisterPage() {
               <UserTypeSelection onSelect={handleUserTypeSelect} />
             ) : (
               <div className="space-y-6">
-                <div className="bg-white/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl p-4 shadow-sm">
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
                   <div className="flex justify-between items-center mb-2">
-                    <h2 className="text-lg font-medium text-primary">
+                    <h2 className="text-lg font-medium text-gray-900 dark:text-white">
                       {userType === "patient" && "Patient Registration"}
                       {userType === "doctor" && "Doctor Registration"}
                       {userType === "hospital" && "Hospital Registration"}
                     </h2>
-                    <span className="text-sm text-muted-foreground">Step {step} of {maxSteps}</span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">Step {step} of {maxSteps}</span>
                   </div>
-                  <Progress value={(step / maxSteps) * 100} className="h-2" />
+                  <div className="h-2 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-blue-600 transition-all duration-300 rounded-full"
+                      style={{ width: `${(step / maxSteps) * 100}%` }}
+                    ></div>
+                  </div>
                 </div>
                 
                 {userType === "patient" && (
