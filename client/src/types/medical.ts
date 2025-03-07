@@ -1,5 +1,3 @@
-import { Types } from 'mongoose';
-
 // Hospital interface
 export interface Hospital {
   resourceType: "Organization";
@@ -156,31 +154,23 @@ export interface HealthMetric {
   current: number;
   min: number;
   max: number;
-  trend: {
-    value: number;
-    isPositive: boolean;
-  };
+  trend: string;
 }
 
 export interface HealthMetrics {
   heartRate: HealthMetric;
   bloodPressure: {
-    systolic: number;
-    diastolic: number;
-    trend: {
-      value: number;
-      isPositive: boolean;
-    };
+    current: string;
+    min: string;
+    max: string;
+    trend: string;
   };
   temperature: HealthMetric;
   oxygenLevel: HealthMetric;
   weight: {
     current: number;
     target: number;
-    trend: {
-      value: number;
-      isPositive: boolean;
-    };
+    trend: string;
   };
   bloodSugar: HealthMetric;
   cholesterol: HealthMetric;
@@ -189,11 +179,7 @@ export interface HealthMetrics {
 }
 
 export interface ChartData {
-  heartRate: {
-    daily: number[];
-    weekly: number[];
-    monthly: number[];
-  };
+  heartRate: number[];
   bloodPressure: {
     systolic: number[];
     diastolic: number[];
@@ -201,7 +187,7 @@ export interface ChartData {
   weight: number[];
   bloodSugar: {
     fasting: number[];
-    postMeal: number[];
+    afterMeal: number[];
   };
   cholesterol: {
     total: number[];

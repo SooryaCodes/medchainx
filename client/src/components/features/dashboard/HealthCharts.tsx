@@ -20,7 +20,6 @@ interface HealthChartsProps {
 }
 
 export function HealthCharts({ chartData }: HealthChartsProps) {
-  const [chartTimeframe, setChartTimeframe] = useState("daily");
   const [selectedCharts, setSelectedCharts] = useState<string[]>(["heartRate", "bloodPressure", "bloodSugar", "cholesterol"]);
 
   const toggleChart = (chartName: string) => {
@@ -35,19 +34,6 @@ export function HealthCharts({ chartData }: HealthChartsProps) {
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Health Trends</h3>
-        <div className="flex items-center space-x-2 mt-2 sm:mt-0">
-          <span className="text-sm text-gray-500 dark:text-gray-400">Timeframe:</span>
-          <Select value={chartTimeframe} onValueChange={setChartTimeframe}>
-            <SelectTrigger className="w-[120px] h-8 text-sm">
-              <SelectValue placeholder="Select timeframe" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="daily">Daily</SelectItem>
-              <SelectItem value="weekly">Weekly</SelectItem>
-              <SelectItem value="monthly">Monthly</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -128,7 +114,7 @@ export function HealthCharts({ chartData }: HealthChartsProps) {
             </CardHeader>
             <CardContent>
               <div className="h-[250px] flex items-end justify-between gap-2">
-                {chartData.heartRate[chartTimeframe as keyof typeof chartData.heartRate].slice(0, 7).map((value, index) => (
+                {chartData.heartRate.slice(0, 7).map((value, index) => (
                   <div key={index} className="relative h-full flex flex-col justify-end items-center group">
                     <div 
                       className="w-10 bg-gradient-to-t from-red-500 to-red-400 rounded-t-md group-hover:from-red-600 group-hover:to-red-500 transition-all"
@@ -144,7 +130,7 @@ export function HealthCharts({ chartData }: HealthChartsProps) {
             </CardContent>
             <CardFooter className="text-sm text-gray-500 flex justify-between">
               <span>
-                Average: {Math.round(chartData.heartRate[chartTimeframe as keyof typeof chartData.heartRate].slice(0, 7).reduce((a, b) => a + b, 0) / 7)} BPM
+                Average: {Math.round(chartData.heartRate.slice(0, 7).reduce((a, b) => a + b, 0) / 7)} BPM
               </span>
               <Button variant="ghost" size="sm" className="text-blue-600 dark:text-blue-400 p-0 h-auto">
                 View Details
@@ -164,7 +150,7 @@ export function HealthCharts({ chartData }: HealthChartsProps) {
             </CardHeader>
             <CardContent>
               <div className="h-[250px] flex items-end justify-between gap-2">
-                {chartData.bloodPressure.systolic.map((value, index) => (
+                {chartData.bloodPressure.systolic.slice(0, 7).map((value, index) => (
                   <div key={index} className="relative h-full flex flex-col justify-end items-center group">
                     <div className="flex flex-col gap-0.5">
                       <div 
@@ -213,7 +199,7 @@ export function HealthCharts({ chartData }: HealthChartsProps) {
             </CardHeader>
             <CardContent>
               <div className="h-[250px] flex items-end justify-between gap-2">
-                {chartData.bloodSugar.fasting.map((value, index) => (
+                {chartData.bloodSugar.fasting.slice(0, 7).map((value, index) => (
                   <div key={index} className="relative h-full flex flex-col justify-end items-center group">
                     <div className="flex flex-col gap-0.5">
                       <div 
@@ -222,13 +208,13 @@ export function HealthCharts({ chartData }: HealthChartsProps) {
                       ></div>
                       <div 
                         className="w-10 bg-gradient-to-t from-violet-500 to-violet-400 rounded-b-md group-hover:from-violet-600 group-hover:to-violet-500 transition-all"
-                        style={{ height: `${(chartData.bloodSugar.postMeal[index] / 150) * 50}%` }}
+                        style={{ height: `${(chartData.bloodSugar.afterMeal[index] / 150) * 50}%` }}
                       ></div>
                     </div>
                     <span className="text-xs mt-1 text-gray-500">{`Day ${index + 1}`}</span>
                     <div className="absolute bottom-full mb-2 bg-white dark:bg-gray-800 shadow-md rounded-md px-2 py-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                       Fasting: {value} mg/dL<br />
-                      Post-meal: {chartData.bloodSugar.postMeal[index]} mg/dL
+                      Post-meal: {chartData.bloodSugar.afterMeal[index]} mg/dL
                     </div>
                   </div>
                 ))}
@@ -263,20 +249,20 @@ export function HealthCharts({ chartData }: HealthChartsProps) {
             </CardHeader>
             <CardContent>
               <div className="h-[250px] flex items-end justify-between gap-2">
-                {chartData.cholesterol.total.map((value, index) => (
+                {chartData.cholesterol.total.slice(0, 7).map((value, index) => (
                   <div key={index} className="relative h-full flex flex-col justify-end items-center group">
                     <div className="flex flex-col gap-0.5">
                       <div 
                         className="w-10 bg-gradient-to-t from-yellow-500 to-yellow-400 rounded-t-md group-hover:from-yellow-600 group-hover:to-yellow-500 transition-all"
-                        style={{ height: `${(value / 250) * 100}%` }}
+                        style={{ height: `${(value / 300) * 100}%` }}
                       ></div>
                       <div className="flex w-10">
                         <div 
-                          className="flex-1 bg-gradient-to-t from-green-500 to-green-400 rounded-bl-md group-hover:from-green-600 group-hover:to-green-500 transition-all"
+                          className="flex-1 bg-gradient-to-t from-green-500 to-green-400 group-hover:from-green-600 group-hover:to-green-500 transition-all"
                           style={{ height: `${(chartData.cholesterol.hdl[index] / 100) * 100}%` }}
                         ></div>
                         <div 
-                          className="flex-1 bg-gradient-to-t from-red-500 to-red-400 rounded-br-md group-hover:from-red-600 group-hover:to-red-500 transition-all"
+                          className="flex-1 bg-gradient-to-t from-red-500 to-red-400 group-hover:from-red-600 group-hover:to-red-500 transition-all"
                           style={{ height: `${(chartData.cholesterol.ldl[index] / 200) * 100}%` }}
                         ></div>
                       </div>
