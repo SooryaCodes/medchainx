@@ -14,6 +14,11 @@ type HospitalRegistrationProps = {
 
 export default function HospitalRegistration({ step, setStep }: HospitalRegistrationProps) {
   const [formData, setFormData] = useState({
+    // Authentication Info
+    username: "",
+    password: "",
+    confirm_password: "",
+    
     // Hospital Info
     name: "",
     registration_number: "",
@@ -102,7 +107,46 @@ export default function HospitalRegistration({ step, setStep }: HospitalRegistra
 
   const renderStep1 = () => (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold text-blue-800 dark:text-blue-300">Hospital Information</h2>
+      <h2 className="text-xl font-semibold text-blue-800 dark:text-blue-300">Account Information</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2 md:col-span-2">
+          <Label htmlFor="username">Admin Username</Label>
+          <Input 
+            id="username" 
+            name="username" 
+            value={formData.username} 
+            onChange={handleChange} 
+            placeholder="Choose an admin username"
+            className="border-blue-200 focus:border-blue-400"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="password">Password</Label>
+          <Input 
+            id="password" 
+            name="password" 
+            type="password"
+            value={formData.password} 
+            onChange={handleChange} 
+            placeholder="Create a password"
+            className="border-blue-200 focus:border-blue-400"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="confirm_password">Confirm Password</Label>
+          <Input 
+            id="confirm_password" 
+            name="confirm_password" 
+            type="password"
+            value={formData.confirm_password} 
+            onChange={handleChange} 
+            placeholder="Confirm your password"
+            className="border-blue-200 focus:border-blue-400"
+          />
+        </div>
+      </div>
+      
+      <h2 className="text-xl font-semibold text-blue-800 dark:text-blue-300 mt-8">Hospital Information</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2 md:col-span-2">
           <Label htmlFor="name">Hospital Name</Label>

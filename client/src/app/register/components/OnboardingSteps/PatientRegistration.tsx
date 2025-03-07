@@ -12,6 +12,11 @@ type PatientRegistrationProps = {
 
 export default function PatientRegistration({ step, setStep }: PatientRegistrationProps) {
   const [formData, setFormData] = useState({
+    // Authentication Info
+    username: "",
+    password: "",
+    confirm_password: "",
+    
     // Personal Info
     first_name: "",
     last_name: "",
@@ -50,6 +55,41 @@ export default function PatientRegistration({ step, setStep }: PatientRegistrati
   const renderStep1 = () => (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-2 md:col-span-2">
+          <Label htmlFor="username">Username</Label>
+          <Input 
+            id="username" 
+            name="username" 
+            value={formData.username} 
+            onChange={handleChange} 
+            placeholder="Choose a username"
+            className="border-blue-200 focus:border-blue-400"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="password">Password</Label>
+          <Input 
+            id="password" 
+            name="password" 
+            type="password"
+            value={formData.password} 
+            onChange={handleChange} 
+            placeholder="Create a password"
+            className="border-blue-200 focus:border-blue-400"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="confirm_password">Confirm Password</Label>
+          <Input 
+            id="confirm_password" 
+            name="confirm_password" 
+            type="password"
+            value={formData.confirm_password} 
+            onChange={handleChange} 
+            placeholder="Confirm your password"
+            className="border-blue-200 focus:border-blue-400"
+          />
+        </div>
         <div className="space-y-2">
           <Label htmlFor="first_name">First Name</Label>
           <Input 
@@ -270,12 +310,12 @@ export default function PatientRegistration({ step, setStep }: PatientRegistrati
       <CardContent className="p-8">
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-primary">
-            {step === 1 && "Personal Information"}
+            {step === 1 && "Account & Personal Information"}
             {step === 2 && "Contact Information"}
             {step === 3 && "Medical Information"}
           </h2>
           <p className="text-muted-foreground mt-1">
-            {step === 1 && "Please provide your basic personal details"}
+            {step === 1 && "Create your account and provide your basic details"}
             {step === 2 && "How can we reach you?"}
             {step === 3 && "Important health information for your records"}
           </p>
