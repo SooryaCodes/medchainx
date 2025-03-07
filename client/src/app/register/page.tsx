@@ -33,10 +33,11 @@ export default function RegisterPage() {
     }
   };
 
-  const handleSubmit = () => {
-    // Handle form submission
-    console.log("Form submitted");
-    // Redirect to success page or dashboard
+  const handleSubmit = async () => {
+    const form = document.querySelector('form');
+    if (form) {
+      form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+    }
   };
 
   return (

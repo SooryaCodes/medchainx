@@ -6,52 +6,40 @@ import bcrypt from 'bcryptjs';
 
 // Interface for patient registration data from frontend
 interface PatientRegistrationData {
+  // Authentication Info
+  username: string;
+  password: string;
+  
   // Personal Information
   firstName: string;
   lastName: string;
-  email: string;
-  password: string;
   dateOfBirth: string;
   gender: string;
+  
+  // Contact Info
+  email: string;
   phone: string;
-  profileImage?: string;
-
+  
   // Address Information
-  address?: {
+  address: {
     street: string;
     city: string;
     state: string;
     postalCode: string;
     country: string;
   };
-
-  // Medical Information
-  bloodType?: string;
-  allergies?: string[];
-  chronicConditions?: string[];
-  currentMedications?: string[];
   
   // Emergency Contact
-  emergencyContact?: {
+  emergencyContact: {
     name: string;
-    relationship: string;
     phone: string;
-    email?: string;
+    relationship: string;
   };
-
-  // Additional Information
-  preferredLanguage?: string;
-  nationality?: string;
-  maritalStatus?: string;
-  occupation?: string;
   
-  // Insurance Information
-  insuranceInfo?: {
-    provider: string;
-    policyNumber: string;
-    groupNumber?: string;
-    validUntil?: string;
-  };
+  // Additional Fields
+  bloodType: string;
+  healthInsuranceId: string;
+  nationalId: string;
 }
 
 // @desc    Register new patient
@@ -73,45 +61,35 @@ export const registerPatient = catchAsync(async (
   }
 
   try {
-    // 2. Create FHIR Patient resource
-    const fhirPatient = await FHIRService.createPatient({
+    // Create MongoDB Patient document
+    const patient = await PatientModel.create({
+      username: patientData.username,
+      password: bcrypt.hashSync(patientData.password, 10),
       name: {
-        family: patientData.lastName,
-        given: [patientData.firstName]
+        given: [patientData.firstName],
+        family: patientData.lastName
       },
-      gender: patientData.gender,
       birthDate: patientData.dateOfBirth,
+      gender: patientData.gender,
       contact: {
-        phone: patientData.phone,
-        email: patientData.email
+        email: patientData.email,
+        phone: patientData.phone
       },
       address: patientData.address,
       emergencyContact: patientData.emergencyContact,
-      preferredLanguage: patientData.preferredLanguage,
-      nationality: patientData.nationality,
-      maritalStatus: patientData.maritalStatus,
-      extension: [
-        {
-          url: "http://hl7.org/fhir/StructureDefinition/patient-bloodType",
-          valueString: patientData.bloodType
-        }
-      ]
-    });
-
-    // 3. Create MongoDB Patient document
-    const patient = await PatientModel.create({
-      ...patientData,
-      fhirId: fhirPatient.id,
+      bloodType: patientData.bloodType,
+      healthInsuranceId: patientData.healthInsuranceId,
+      nationalId: patientData.nationalId,
       doctors: [],
       medicalReports: [],
       appointments: [],
       prescriptions: []
     });
 
-    // 4. Generate JWT token
+    // Generate JWT token
     const token = patient.generateAuthToken();
 
-    // 5. Send response
+    // Send response
     res.status(201).json({
       success: true,
       data: {
@@ -121,7 +99,6 @@ export const registerPatient = catchAsync(async (
       message: 'Patient registered successfully'
     });
   } catch (error) {
-    // If FHIR creation fails, ensure we don't have orphaned records
     console.error('Registration error:', error);
     res.status(500).json({
       success: false,

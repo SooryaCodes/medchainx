@@ -41,7 +41,7 @@ app.use(helmet());
 app.use(morgan('dev'));
 
 // Routes
-app.use('/api/patients', patientRoutes);
+app.use('/api/patient', patientRoutes);
 
 
 // Error handling middleware

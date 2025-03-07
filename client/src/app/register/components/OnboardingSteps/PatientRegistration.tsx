@@ -1,374 +1,147 @@
-import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+"use client";
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Select } from '@/components/ui/select';
+import axiosInstance from '@/lib/axios';
+import { setAuthCookies } from '@/lib/cookies';
+import { useRouter } from 'next/navigation';
+import { PatientRegistrationData, RegistrationResponse } from '@/types/auth';
 
-type PatientRegistrationProps = {
+const patientSchema = z.object({
+  firstName: z.string().min(2, 'First name must be at least 2 characters'),
+  lastName: z.string().min(2, 'Last name must be at least 2 characters'),
+  email: z.string().email('Invalid email address'),
+  password: z.string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Password must contain at least one uppercase letter, one lowercase letter, and one number'),
+  dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format'),
+  gender: z.enum(['male', 'female', 'other']),
+  phoneNumber: z.string().regex(/^\+?[1-9]\d{9,14}$/, 'Invalid phone number'),
+  address: z.string().min(10, 'Address must be at least 10 characters'),
+});
+
+interface Props {
   step: number;
   setStep: (step: number) => void;
-};
+}
 
-export default function PatientRegistration({ step, setStep }: PatientRegistrationProps) {
-  const [formData, setFormData] = useState({
-    // Authentication Info
-    username: "",
-    password: "",
-    confirm_password: "",
-    
-    // Personal Info (matches schema)
-    name: {
-      given: [""], // First name will be stored here
-      family: "",  // Last name
-    },
-    birthDate: "",
-    gender: "",
-    
-    // Contact Info
-    contact: {
-      phone: "",
-      email: "",
-    },
-    
-    // Address (will be stored in user profile)
-    address: {
-      street: "",
-      city: "",
-      state: "",
-      postalCode: "",
-      country: "",
-    },
-    
-    // Emergency Contact
-    emergencyContact: {
-      name: "",
-      phone: "",
-      relationship: "", // Additional field for relationship
-    },
-    
-    // Additional fields for registration
-    bloodType: "",
-    healthInsuranceId: "",
-    nationalId: "",
+export default function PatientRegistration({ step, setStep }: Props) {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<PatientRegistrationData>({
+    resolver: zodResolver(patientSchema),
   });
 
-  type FormDataKeys = keyof typeof formData;
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    
-    // Handle nested fields
-    if (name.includes('.')) {
-      const [parent, child] = name.split('.');
-      setFormData(prev => {
-        // Create a safe copy with proper typing
-        const parentObj = (prev[parent as FormDataKeys] && 
-                           typeof prev[parent as FormDataKeys] === 'object' && 
-                           prev[parent as FormDataKeys] !== null) 
-                           ? {...prev[parent as FormDataKeys] as Record<string, any>} 
-                           : {};
-        
-        return {
-          ...prev,
-          [parent as FormDataKeys]: {
-            ...parentObj,
-            [child]: value
-          }
-        };
-      });
-    } else {
-      setFormData(prev => ({ ...prev, [name as FormDataKeys]: value }));
+  const onSubmit = async (data: PatientRegistrationData) => {
+    try {
+      setIsLoading(true);
+      setError('');
+      
+      const response = await axiosInstance.post<RegistrationResponse>('/patients/register', data);
+      
+      if (response.data.success) {
+        const { token, patientId } = response.data.data;
+        setAuthCookies(token, patientId);
+        router.push('/dashboard'); // Redirect to dashboard after successful registration
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleGivenNameChange = (value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      name: {
-        ...prev.name,
-        given: [value]
-      }
-    }));
-  };
-
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const renderStep1 = () => (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="username">Username</Label>
-          <Input 
-            id="username" 
-            name="username" 
-            value={formData.username} 
-            onChange={handleChange} 
-            placeholder="Choose a username"
-            className="border-blue-200 focus:border-blue-400"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
-          <Input 
-            id="password" 
-            name="password" 
-            type="password"
-            value={formData.password} 
-            onChange={handleChange} 
-            placeholder="Create a password"
-            className="border-blue-200 focus:border-blue-400"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="confirm_password">Confirm Password</Label>
-          <Input 
-            id="confirm_password" 
-            name="confirm_password" 
-            type="password"
-            value={formData.confirm_password} 
-            onChange={handleChange} 
-            placeholder="Confirm your password"
-            className="border-blue-200 focus:border-blue-400"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="given_name">First Name</Label>
-          <Input 
-            id="given_name" 
-            name="given_name" 
-            value={formData.name.given[0]} 
-            onChange={(e) => handleGivenNameChange(e.target.value)} 
-            placeholder="Enter your first name"
-            className="border-blue-200 focus:border-blue-400"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="family">Last Name</Label>
-          <Input 
-            id="family" 
-            name="name.family" 
-            value={formData.name.family} 
-            onChange={handleChange} 
-            placeholder="Enter your last name"
-            className="border-blue-200 focus:border-blue-400"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="birthDate">Date of Birth</Label>
-          <Input 
-            id="birthDate" 
-            name="birthDate" 
-            type="date" 
-            value={formData.birthDate} 
-            onChange={handleChange}
-            className="border-blue-200 focus:border-blue-400"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="gender">Gender</Label>
-          <Select onValueChange={(value) => handleSelectChange("gender", value)}>
-            <SelectTrigger className="border-blue-200">
-              <SelectValue placeholder="Select gender" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="male">Male</SelectItem>
-              <SelectItem value="female">Female</SelectItem>
-              <SelectItem value="other">Other</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderStep2 = () => (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-2">
-          <Label htmlFor="email">Email Address</Label>
-          <Input 
-            id="email" 
-            name="contact.email" 
-            type="email" 
-            value={formData.contact.email} 
-            onChange={handleChange} 
-            placeholder="Enter your email"
-            className="border-blue-200 focus:border-blue-400"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="phone">Phone Number</Label>
-          <Input 
-            id="phone" 
-            name="contact.phone" 
-            value={formData.contact.phone} 
-            onChange={handleChange} 
-            placeholder="Enter your phone number"
-            className="border-blue-200 focus:border-blue-400"
-          />
-        </div>
-        <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="street">Street Address</Label>
-          <Textarea 
-            id="street" 
-            name="address.street" 
-            value={formData.address.street} 
-            onChange={handleChange} 
-            placeholder="Enter your street address"
-            className="border-blue-200 focus:border-blue-400"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="city">City</Label>
-          <Input 
-            id="city" 
-            name="address.city" 
-            value={formData.address.city} 
-            onChange={handleChange} 
-            placeholder="Enter your city"
-            className="border-blue-200 focus:border-blue-400"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="state">State/Province</Label>
-          <Input 
-            id="state" 
-            name="address.state" 
-            value={formData.address.state} 
-            onChange={handleChange} 
-            placeholder="Enter your state"
-            className="border-blue-200 focus:border-blue-400"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="postalCode">ZIP/Postal Code</Label>
-          <Input 
-            id="postalCode" 
-            name="address.postalCode" 
-            value={formData.address.postalCode} 
-            onChange={handleChange} 
-            placeholder="Enter your ZIP code"
-            className="border-blue-200 focus:border-blue-400"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="country">Country</Label>
-          <Input 
-            id="country" 
-            name="address.country" 
-            value={formData.address.country} 
-            onChange={handleChange} 
-            placeholder="Enter your country"
-            className="border-blue-200 focus:border-blue-400"
-          />
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderStep3 = () => (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-2">
-          <Label htmlFor="bloodType">Blood Type</Label>
-          <Select onValueChange={(value) => handleSelectChange("bloodType", value)}>
-            <SelectTrigger className="border-blue-200">
-              <SelectValue placeholder="Select blood type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="A+">A+</SelectItem>
-              <SelectItem value="A-">A-</SelectItem>
-              <SelectItem value="B+">B+</SelectItem>
-              <SelectItem value="B-">B-</SelectItem>
-              <SelectItem value="AB+">AB+</SelectItem>
-              <SelectItem value="AB-">AB-</SelectItem>
-              <SelectItem value="O+">O+</SelectItem>
-              <SelectItem value="O-">O-</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="healthInsuranceId">Health Insurance ID</Label>
-          <Input 
-            id="healthInsuranceId" 
-            name="healthInsuranceId" 
-            value={formData.healthInsuranceId} 
-            onChange={handleChange} 
-            placeholder="Enter your insurance ID"
-            className="border-blue-200 focus:border-blue-400"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="nationalId">National ID</Label>
-          <Input 
-            id="nationalId" 
-            name="nationalId" 
-            value={formData.nationalId} 
-            onChange={handleChange} 
-            placeholder="Enter your national ID"
-            className="border-blue-200 focus:border-blue-400"
-          />
-        </div>
-        <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="emergencyName">Emergency Contact Name</Label>
-          <Input 
-            id="emergencyName" 
-            name="emergencyContact.name" 
-            value={formData.emergencyContact.name} 
-            onChange={handleChange} 
-            placeholder="Enter emergency contact name"
-            className="border-blue-200 focus:border-blue-400"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="emergencyRelationship">Relationship</Label>
-          <Input 
-            id="emergencyRelationship" 
-            name="emergencyContact.relationship" 
-            value={formData.emergencyContact.relationship} 
-            onChange={handleChange} 
-            placeholder="Enter relationship"
-            className="border-blue-200 focus:border-blue-400"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="emergencyPhone">Emergency Contact Number</Label>
-          <Input 
-            id="emergencyPhone" 
-            name="emergencyContact.phone" 
-            value={formData.emergencyContact.phone} 
-            onChange={handleChange} 
-            placeholder="Enter emergency contact number"
-            className="border-blue-200 focus:border-blue-400"
-          />
-        </div>
-      </div>
-    </div>
-  );
-
   return (
-    <Card className="border-0 shadow-lg bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm dark:from-gray-900/80 dark:to-gray-800/60">
-      <CardContent className="p-8">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-primary">
-            {step === 1 && "Account & Personal Information"}
-            {step === 2 && "Contact Information"}
-            {step === 3 && "Medical Information"}
-          </h2>
-          <p className="text-muted-foreground mt-1">
-            {step === 1 && "Create your account and provide your basic details"}
-            {step === 2 && "How can we reach you?"}
-            {step === 3 && "Important health information for your records"}
-          </p>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {error && (
+        <div className="p-4 bg-red-50 text-red-600 rounded-lg">
+          {error}
         </div>
-        
-        {step === 1 && renderStep1()}
-        {step === 2 && renderStep2()}
-        {step === 3 && renderStep3()}
-      </CardContent>
-    </Card>
+      )}
+
+      {step === 1 && (
+        <>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Input
+                {...register('firstName')}
+                placeholder="First Name"
+                error={errors.firstName?.message}
+              />
+            </div>
+            <div>
+              <Input
+                {...register('lastName')}
+                placeholder="Last Name"
+              />
+              {errors.lastName && (
+                <p className="text-red-500 text-sm mt-1">{errors.lastName.message}</p>
+              )}
+            </div>
+          </div>
+          <Input
+            {...register('email')}
+            type="email"
+            placeholder="Email"
+            error={errors.email?.message}
+          />
+          <Input
+            {...register('password')}
+            type="password"
+            placeholder="Password"
+            error={errors.password?.message}
+          />
+        </>
+      )}
+
+      {step === 2 && (
+        <>
+          <Input
+            {...register('dateOfBirth')}
+            type="date"
+            placeholder="Date of Birth"
+            error={errors.dateOfBirth?.message}
+          />
+          <Select
+            {...register('gender')}
+            error={errors.gender?.message}
+          >
+            <option value="">Select Gender</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other</option>
+          </Select>
+        </>
+      )}
+
+      {step === 3 && (
+        <>
+          <Input
+            {...register('phoneNumber')}
+            placeholder="Phone Number"
+            error={errors.phoneNumber?.message}
+          />
+          <textarea
+            {...register('address')}
+            placeholder="Address"
+            className="w-full p-2 border rounded"
+            rows={4}
+          />
+          {errors.address && (
+            <p className="text-red-500 text-sm">{errors.address.message}</p>
+          )}
+        </>
+      )}
+    </form>
   );
 }

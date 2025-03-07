@@ -75,80 +75,115 @@ export const DoctorModel = mongoose.model<IDoctor>("Doctor", DoctorSchema);
 
 // 3️⃣ Patient Schema
 export interface IPatient extends Document {
-  resourceType: "Patient";
-  id: string;
-  name: { given: string[]; family: string };
-  birthDate: Date;
+  username: string;
+  password: string;
+  name: {
+    given: string[];
+    family: string;
+  };
+  birthDate: string;
   gender: string;
-  contact: { phone?: string; email?: string };
-  address?: { street?: string; city?: string; state?: string; country?: string; postalCode?: string };
-  emergencyContact: { name: string; phone: string; relationship?: string };
-  hospitalId: mongoose.Types.ObjectId;
+  contact: {
+    email: string;
+    phone: string;
+  };
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+  };
+  emergencyContact: {
+    name: string;
+    phone: string;
+    relationship: string;
+  };
+  bloodType: string;
+  healthInsuranceId: string;
+  nationalId: string;
   doctors: mongoose.Types.ObjectId[];
   medicalReports: mongoose.Types.ObjectId[];
-  // Additional health data fields
-  allergies?: string[];
-  bloodType?: string;
-  height?: number; // in cm
-  weight?: number; // in kg
-  chronicConditions?: string[];
-  medications?: { name: string; dosage: string; frequency: string; startDate?: Date; endDate?: Date }[];
-  insuranceInfo?: { provider: string; policyNumber: string; expiryDate?: Date };
-  vaccinationHistory?: { name: string; date: Date; batchNumber?: string }[];
-  preferredLanguage?: string;
-  nationality?: string;
-  maritalStatus?: string;
-  occupation?: string;
-  lastVisitDate?: Date;
+  appointments: mongoose.Types.ObjectId[];
+  prescriptions: mongoose.Types.ObjectId[];
   generateAuthToken: () => string;
 }
 
-const PatientSchema = new Schema<IPatient>({
-  resourceType: { type: String, default: "Patient" },
-  id: { type: String, required: true, unique: true },
-  name: { given: [{ type: String, required: true }], family: { type: String, required: true } },
-  birthDate: { type: Date, required: true },
-  gender: { type: String, required: true },
-  contact: { phone: String, email: String },
-  address: { street: String, city: String, state: String, country: String, postalCode: String },
-  emergencyContact: { name: String, phone: String, relationship: String },
-  hospitalId: { type: Schema.Types.ObjectId, ref: "Hospital", required: true },
-  doctors: [{ type: Schema.Types.ObjectId, ref: "Doctor" }],
-  medicalReports: [{ type: Schema.Types.ObjectId, ref: "MedicalReport" }],
-  // Additional health data fields
-  allergies: [{ type: String }],
-  bloodType: { type: String },
-  height: { type: Number },
-  weight: { type: Number },
-  chronicConditions: [{ type: String }],
-  medications: [{
-    name: String,
-    dosage: String,
-    frequency: String,
-    startDate: Date,
-    endDate: Date
-  }],
-  insuranceInfo: {
-    provider: String,
-    policyNumber: String,
-    expiryDate: Date
+const PatientSchema = new Schema({
+  username: {
+    type: String,
+    required: true,
+    unique: true
   },
-  vaccinationHistory: [{
+  password: {
+    type: String,
+    required: true
+  },
+  name: {
+    given: [String],
+    family: {
+      type: String,
+      required: true
+    }
+  },
+  birthDate: {
+    type: String,
+    required: true
+  },
+  gender: {
+    type: String,
+    required: true
+  },
+  contact: {
+    email: {
+      type: String,
+      required: true,
+      unique: true
+    },
+    phone: {
+      type: String,
+      required: true
+    }
+  },
+  address: {
+    street: String,
+    city: String,
+    state: String,
+    postalCode: String,
+    country: String
+  },
+  emergencyContact: {
     name: String,
-    date: Date,
-    batchNumber: String
+    phone: String,
+    relationship: String
+  },
+  bloodType: String,
+  healthInsuranceId: String,
+  nationalId: String,
+  doctors: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Doctor'
   }],
-  preferredLanguage: { type: String },
-  nationality: { type: String },
-  maritalStatus: { type: String },
-  occupation: { type: String },
-  lastVisitDate: { type: Date }
+  medicalReports: [{
+    type: Schema.Types.ObjectId,
+    ref: 'MedicalReport'
+  }],
+  appointments: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Appointment'
+  }],
+  prescriptions: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Prescription'
+  }]
+}, {
+  timestamps: true
 });
 
-// Add the method to the schema
-PatientSchema.methods.generateAuthToken = function() {
+// Add JWT token generation method
+PatientSchema.methods.generateAuthToken = function(): string {
   return jwt.sign(
-    { id: this._id, role: 'patient' },
+    { id: this._id },
     process.env.JWT_SECRET || 'your-secret-key',
     { expiresIn: '30d' }
   );
