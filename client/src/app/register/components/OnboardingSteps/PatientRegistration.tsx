@@ -48,9 +48,8 @@ export default function PatientRegistration({ step, setStep }: PatientRegistrati
   };
 
   const renderStep1 = () => (
-    <div className="space-y-4">
-      <h2 className="text-xl font-semibold text-blue-800 dark:text-blue-300">Personal Information</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <Label htmlFor="first_name">First Name</Label>
           <Input 
@@ -102,9 +101,8 @@ export default function PatientRegistration({ step, setStep }: PatientRegistrati
   );
 
   const renderStep2 = () => (
-    <div className="space-y-4">
-      <h2 className="text-xl font-semibold text-blue-800 dark:text-blue-300">Contact Information</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <Label htmlFor="email">Email Address</Label>
           <Input 
@@ -161,14 +159,35 @@ export default function PatientRegistration({ step, setStep }: PatientRegistrati
             className="border-blue-200 focus:border-blue-400"
           />
         </div>
+        <div className="space-y-2">
+          <Label htmlFor="zip_code">ZIP Code</Label>
+          <Input 
+            id="zip_code" 
+            name="zip_code" 
+            value={formData.zip_code} 
+            onChange={handleChange} 
+            placeholder="Enter your ZIP code"
+            className="border-blue-200 focus:border-blue-400"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="country">Country</Label>
+          <Input 
+            id="country" 
+            name="country" 
+            value={formData.country} 
+            onChange={handleChange} 
+            placeholder="Enter your country"
+            className="border-blue-200 focus:border-blue-400"
+          />
+        </div>
       </div>
     </div>
   );
 
   const renderStep3 = () => (
-    <div className="space-y-4">
-      <h2 className="text-xl font-semibold text-blue-800 dark:text-blue-300">Medical Information</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <Label htmlFor="blood_type">Blood Type</Label>
           <Select onValueChange={(value) => handleSelectChange("blood_type", value)}>
@@ -195,6 +214,17 @@ export default function PatientRegistration({ step, setStep }: PatientRegistrati
             value={formData.health_insurance_id} 
             onChange={handleChange} 
             placeholder="Enter your insurance ID"
+            className="border-blue-200 focus:border-blue-400"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="national_id">National ID</Label>
+          <Input 
+            id="national_id" 
+            name="national_id" 
+            value={formData.national_id} 
+            onChange={handleChange} 
+            placeholder="Enter your national ID"
             className="border-blue-200 focus:border-blue-400"
           />
         </div>

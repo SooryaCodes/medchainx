@@ -1,87 +1,108 @@
 "use client";
 import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import UserTypeSelection from "./components/UserTypeSelection";
 import PatientRegistration from "./components/OnboardingSteps/PatientRegistration";
-import HospitalRegistration from "./components/OnboardingSteps/HospitalRegistration";
 import DoctorRegistration from "./components/OnboardingSteps/DoctorRegistration";
+import HospitalRegistration from "./components/OnboardingSteps/HospitalRegistration";
+import AppFeatures from "./components/AppFeatures";
+import RegistrationHeader from "./components/RegistrationHeader";
 
-type UserType = "patient" | "hospital" | "doctor" | null;
-
-export default function Register() {
-  const [userType, setUserType] = useState<UserType>(null);
+export default function RegisterPage() {
+  const [userType, setUserType] = useState<"patient" | "hospital" | "doctor" | null>(null);
   const [step, setStep] = useState(1);
-  const totalSteps = userType === "hospital" ? 4 : 3;
-  const progress = (step / totalSteps) * 100;
+  const maxSteps = userType === "hospital" ? 4 : 3;
 
-  const renderStep = () => {
-    if (!userType) {
-      return <UserTypeSelection onSelect={setUserType} />;
-    }
+  const handleUserTypeSelect = (type: "patient" | "hospital" | "doctor") => {
+    setUserType(type);
+    setStep(1);
+  };
 
-    switch (userType) {
-      case "patient":
-        return <PatientRegistration step={step} setStep={setStep} />;
-      case "hospital":
-        return <HospitalRegistration step={step} setStep={setStep} />;
-      case "doctor":
-        return <DoctorRegistration step={step} setStep={setStep} />;
+  const handleNext = () => {
+    if (step < maxSteps) {
+      setStep(step + 1);
     }
   };
 
+  const handleBack = () => {
+    if (step > 1) {
+      setStep(step - 1);
+    } else {
+      setUserType(null);
+    }
+  };
+
+  const handleSubmit = () => {
+    // Handle form submission
+    console.log("Form submitted");
+    // Redirect to success page or dashboard
+  };
+
   return (
-    <div className="min-h-screen flex bg-gradient-to-b from-blue-50 to-blue-100 p-4 sm:p-8">
-      <div className="w-1/4 p-4 bg-white shadow-lg rounded-lg">
-        <h2 className="text-xl font-bold text-center">App Features</h2>
-        <ul className="mt-4 space-y-2">
-          <li>✅ Secure Patient Record Management</li>
-          <li>✅ Role-Based Access Control</li>
-          <li>✅ Real-Time Data Sync</li>
-          <li>✅ User-Friendly Dashboard</li>
-          <li>✅ Automated Notifications</li>
-        </ul>
-      </div>
-      <div className="w-3/4 mx-auto">
-        <Card className="shadow-xl border-blue-200 dark:border-blue-800">
-          <CardContent className="p-6">
-            <div className="space-y-6">
-              <div className="text-center">
-                <h1 className="text-3xl font-bold text-blue-900 dark:text-blue-100">
-                  Welcome to MedChainX
-                </h1>
-                <p className="text-blue-600 dark:text-blue-300 mt-2">
-                  Let's get you started with your registration
-                </p>
-              </div>
-
-              <Progress value={progress} className="h-2 bg-blue-100" />
-
-              <div className="mt-8">{renderStep()}</div>
-
-              {userType && (
-                <div className="flex justify-between mt-6">
-                  <Button
-                    variant="outline"
-                    onClick={() => step > 1 ? setStep(step - 1) : setUserType(null)}
-                    className="border-blue-200 hover:bg-blue-50"
-                  >
-                    Back
-                  </Button>
-                  {step < totalSteps && (
-                    <Button
-                      onClick={() => setStep(step + 1)}
-                      className="bg-blue-600 hover:bg-blue-700"
-                    >
-                      Continue
-                    </Button>
-                  )}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-blue-950">
+      <RegistrationHeader />
+      
+      <div className="container mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+          {/* Left Column - App Features */}
+          <div className="hidden lg:block">
+            <AppFeatures />
+          </div>
+          
+          {/* Right Column - Registration Form */}
+          <div className="w-full max-w-2xl mx-auto lg:mx-0">
+            {!userType ? (
+              <UserTypeSelection onSelect={handleUserTypeSelect} />
+            ) : (
+              <div className="space-y-6">
+                <div className="bg-white/80 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl p-4 shadow-sm">
+                  <div className="flex justify-between items-center mb-2">
+                    <h2 className="text-lg font-medium text-primary">
+                      {userType === "patient" && "Patient Registration"}
+                      {userType === "doctor" && "Doctor Registration"}
+                      {userType === "hospital" && "Hospital Registration"}
+                    </h2>
+                    <span className="text-sm text-muted-foreground">Step {step} of {maxSteps}</span>
+                  </div>
+                  <Progress value={(step / maxSteps) * 100} className="h-2" />
                 </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                
+                {userType === "patient" && (
+                  <PatientRegistration step={step} setStep={setStep} />
+                )}
+                
+                {userType === "doctor" && (
+                  <DoctorRegistration step={step} setStep={setStep} />
+                )}
+                
+                {userType === "hospital" && (
+                  <HospitalRegistration step={step} setStep={setStep} />
+                )}
+                
+                <div className="flex justify-between mt-8">
+                  <Button 
+                    onClick={handleBack} 
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    {step === 1 ? "Change Type" : "Previous"}
+                  </Button>
+                  
+                  <Button 
+                    onClick={step === maxSteps ? handleSubmit : handleNext}
+                    className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                  >
+                    {step === maxSteps ? "Complete Registration" : "Continue"}
+                    {step !== maxSteps && <ChevronRight className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
