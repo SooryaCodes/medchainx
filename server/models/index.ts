@@ -80,10 +80,25 @@ export interface IPatient extends Document {
   birthDate: Date;
   gender: string;
   contact: { phone?: string; email?: string };
-  emergencyContact: { name: string; phone: string };
+  address?: { street?: string; city?: string; state?: string; country?: string; postalCode?: string };
+  emergencyContact: { name: string; phone: string; relationship?: string };
   hospitalId: mongoose.Types.ObjectId;
   doctors: mongoose.Types.ObjectId[];
   medicalReports: mongoose.Types.ObjectId[];
+  // Additional health data fields
+  allergies?: string[];
+  bloodType?: string;
+  height?: number; // in cm
+  weight?: number; // in kg
+  chronicConditions?: string[];
+  medications?: { name: string; dosage: string; frequency: string; startDate?: Date; endDate?: Date }[];
+  insuranceInfo?: { provider: string; policyNumber: string; expiryDate?: Date };
+  vaccinationHistory?: { name: string; date: Date; batchNumber?: string }[];
+  preferredLanguage?: string;
+  nationality?: string;
+  maritalStatus?: string;
+  occupation?: string;
+  lastVisitDate?: Date;
 }
 
 const PatientSchema = new Schema<IPatient>({
@@ -93,10 +108,39 @@ const PatientSchema = new Schema<IPatient>({
   birthDate: { type: Date, required: true },
   gender: { type: String, required: true },
   contact: { phone: String, email: String },
-  emergencyContact: { name: String, phone: String },
+  address: { street: String, city: String, state: String, country: String, postalCode: String },
+  emergencyContact: { name: String, phone: String, relationship: String },
   hospitalId: { type: Schema.Types.ObjectId, ref: "Hospital", required: true },
   doctors: [{ type: Schema.Types.ObjectId, ref: "Doctor" }],
   medicalReports: [{ type: Schema.Types.ObjectId, ref: "MedicalReport" }],
+  // Additional health data fields
+  allergies: [{ type: String }],
+  bloodType: { type: String },
+  height: { type: Number },
+  weight: { type: Number },
+  chronicConditions: [{ type: String }],
+  medications: [{
+    name: String,
+    dosage: String,
+    frequency: String,
+    startDate: Date,
+    endDate: Date
+  }],
+  insuranceInfo: {
+    provider: String,
+    policyNumber: String,
+    expiryDate: Date
+  },
+  vaccinationHistory: [{
+    name: String,
+    date: Date,
+    batchNumber: String
+  }],
+  preferredLanguage: { type: String },
+  nationality: { type: String },
+  maritalStatus: { type: String },
+  occupation: { type: String },
+  lastVisitDate: { type: Date }
 });
 
 export const PatientModel = mongoose.model<IPatient>("Patient", PatientSchema);

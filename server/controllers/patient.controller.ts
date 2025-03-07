@@ -19,7 +19,14 @@ export const registerPatient = async (req: Request, res: Response) => {
       nationality,
       allergies,
       bloodType,
-      insuranceInfo
+      height,
+      weight,
+      chronicConditions,
+      medications,
+      insuranceInfo,
+      vaccinationHistory,
+      maritalStatus,
+      occupation
     } = req.body;
 
     // Validate required fields
@@ -48,7 +55,8 @@ export const registerPatient = async (req: Request, res: Response) => {
       address,
       emergencyContact,
       preferredLanguage,
-      nationality
+      nationality,
+      maritalStatus
     });
 
     // Create MongoDB patient document
@@ -59,14 +67,25 @@ export const registerPatient = async (req: Request, res: Response) => {
       birthDate,
       gender,
       contact,
+      address,
       emergencyContact,
       hospitalId,
       doctors: [],
       medicalReports: [],
-      // Additional fields not in FHIR but useful for the application
+      // Additional health data fields
       allergies: allergies || [],
       bloodType,
-      insuranceInfo
+      height,
+      weight,
+      chronicConditions: chronicConditions || [],
+      medications: medications || [],
+      insuranceInfo,
+      vaccinationHistory: vaccinationHistory || [],
+      preferredLanguage,
+      nationality,
+      maritalStatus,
+      occupation,
+      lastVisitDate: new Date()
     });
 
     // Save patient to MongoDB
@@ -232,25 +251,100 @@ export const getPatient = async (req: Request, res: Response) => {
 // Update patient
 export const updatePatient = async (req: Request, res: Response) => {
   try {
-    const patient = await PatientModel.findOneAndUpdate(
-      { id: req.params.id },
-      req.body,
-      { new: true, runValidators: true }
-    );
+    const {
+      name,
+      birthDate,
+      gender,
+      contact,
+      address,
+      emergencyContact,
+      allergies,
+      bloodType,
+      height,
+      weight,
+      chronicConditions,
+      medications,
+      insuranceInfo,
+      vaccinationHistory,
+      preferredLanguage,
+      nationality,
+      maritalStatus,
+      occupation
+    } = req.body;
+
+    // Find patient first to get the FHIR ID
+    const existingPatient = await PatientModel.findOne({ id: req.params.id });
     
-    if (!patient) {
+    if (!existingPatient) {
       return res.status(404).json({
         success: false,
         error: 'Patient not found'
       });
     }
 
+    // Update FHIR Patient resource if core medical data is changed
+    if (name || birthDate || gender || contact || address || emergencyContact || preferredLanguage || nationality || maritalStatus) {
+      // Prepare data for FHIR update
+      const fhirUpdateData = {
+        ...existingPatient.toObject(),
+        name: name || existingPatient.name,
+        birthDate: birthDate || existingPatient.birthDate,
+        gender: gender || existingPatient.gender,
+        contact: contact || existingPatient.contact,
+        address: address || existingPatient.address,
+        emergencyContact: emergencyContact || existingPatient.emergencyContact,
+        preferredLanguage: preferredLanguage || existingPatient.preferredLanguage,
+        nationality: nationality || existingPatient.nationality,
+        maritalStatus: maritalStatus || existingPatient.maritalStatus
+      };
+
+      // Update FHIR resource
+      await FHIRService.updatePatient(existingPatient.id, fhirUpdateData);
+    }
+
+    // Update MongoDB document with all fields
+    const updatedPatient = await PatientModel.findOneAndUpdate(
+      { id: req.params.id },
+      {
+        ...(name && { name }),
+        ...(birthDate && { birthDate }),
+        ...(gender && { gender }),
+        ...(contact && { contact }),
+        ...(address && { address }),
+        ...(emergencyContact && { emergencyContact }),
+        ...(allergies && { allergies }),
+        ...(bloodType && { bloodType }),
+        ...(height && { height }),
+        ...(weight && { weight }),
+        ...(chronicConditions && { chronicConditions }),
+        ...(medications && { medications }),
+        ...(insuranceInfo && { insuranceInfo }),
+        ...(vaccinationHistory && { vaccinationHistory }),
+        ...(preferredLanguage && { preferredLanguage }),
+        ...(nationality && { nationality }),
+        ...(maritalStatus && { maritalStatus }),
+        ...(occupation && { occupation }),
+        lastVisitDate: new Date()
+      },
+      { new: true, runValidators: true }
+    ).populate('hospitalId', 'name').populate('doctors', 'name specialty');
+    
     res.status(200).json({
       success: true,
-      data: patient
+      data: updatedPatient
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating patient:', error);
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map((val: any) => val.message);
+      return res.status(400).json({
+        success: false,
+        error: messages.join(', ')
+      });
+    }
+    
     res.status(500).json({
       success: false,
       error: 'Server Error'
@@ -261,7 +355,8 @@ export const updatePatient = async (req: Request, res: Response) => {
 // Delete patient
 export const deletePatient = async (req: Request, res: Response) => {
   try {
-    const patient = await PatientModel.findOneAndDelete({ id: req.params.id });
+    // Find patient first to get the FHIR ID
+    const patient = await PatientModel.findOne({ id: req.params.id });
     
     if (!patient) {
       return res.status(404).json({
@@ -270,8 +365,31 @@ export const deletePatient = async (req: Request, res: Response) => {
       });
     }
 
+    // Delete from FHIR server first
+    await FHIRService.deletePatient(patient.id);
+
+    // Remove patient from hospital
+    if (patient.hospitalId) {
+      await HospitalModel.findByIdAndUpdate(
+        patient.hospitalId,
+        { $pull: { patients: patient._id } }
+      );
+    }
+
+    // Remove patient from doctors' patient lists
+    for (const doctorId of patient.doctors) {
+      await DoctorModel.findByIdAndUpdate(
+        doctorId,
+        { $pull: { patients: patient._id } }
+      );
+    }
+
+    // Delete from MongoDB
+    await PatientModel.findOneAndDelete({ id: req.params.id });
+
     res.status(200).json({
       success: true,
+      message: 'Patient deleted successfully',
       data: {}
     });
   } catch (error) {
@@ -321,6 +439,221 @@ export const addDoctorToPatient = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error adding doctor to patient:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server Error'
+    });
+  }
+};
+
+// Export patient data in FHIR format
+export const exportPatientFHIR = async (req: Request, res: Response) => {
+  try {
+    const patient = await PatientModel.findOne({ id: req.params.id });
+    
+    if (!patient) {
+      return res.status(404).json({
+        success: false,
+        error: 'Patient not found'
+      });
+    }
+
+    // Get FHIR representation from FHIR server
+    const fhirPatient = await FHIRService.getPatient(patient.id);
+
+    // Get related FHIR resources
+    const fhirParams = { patient: `Patient/${patient.id}` };
+    const encounters = await FHIRService.searchResources('Encounter', fhirParams);
+    const medicationRequests = await FHIRService.searchResources('MedicationRequest', fhirParams);
+    const diagnosticReports = await FHIRService.searchResources('DiagnosticReport', fhirParams);
+
+    // Create a FHIR Bundle with all resources
+    const bundle = {
+      resourceType: 'Bundle',
+      type: 'collection',
+      entry: [
+        {
+          resource: fhirPatient
+        },
+        ...(encounters.entry || []),
+        ...(medicationRequests.entry || []),
+        ...(diagnosticReports.entry || [])
+      ]
+    };
+
+    res.status(200).json({
+      success: true,
+      data: bundle
+    });
+  } catch (error) {
+    console.error('Error exporting patient FHIR data:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server Error'
+    });
+  }
+};
+
+// Get patient's medical history
+export const getPatientMedicalHistory = async (req: Request, res: Response) => {
+  try {
+    const patient = await PatientModel.findOne({ id: req.params.id })
+      .populate({
+        path: 'medicalReports',
+        populate: {
+          path: 'doctorId',
+          select: 'name specialty'
+        }
+      });
+    
+    if (!patient) {
+      return res.status(404).json({
+        success: false,
+        error: 'Patient not found'
+      });
+    }
+
+    // Get FHIR resources for comprehensive medical history
+    const fhirParams = { patient: `Patient/${patient.id}` };
+    
+    // Get encounters, medications, and diagnostic reports from FHIR
+    const [encounters, medications, diagnosticReports] = await Promise.all([
+      FHIRService.searchResources('Encounter', fhirParams),
+      FHIRService.searchResources('MedicationRequest', fhirParams),
+      FHIRService.searchResources('DiagnosticReport', fhirParams)
+    ]);
+
+    // Organize data chronologically
+    const medicalHistory = {
+      patientInfo: {
+        id: patient.id,
+        name: patient.name,
+        birthDate: patient.birthDate,
+        gender: patient.gender,
+        bloodType: patient.bloodType,
+        allergies: patient.allergies,
+        chronicConditions: patient.chronicConditions
+      },
+      encounters: encounters.entry?.map((entry: any) => entry.resource) || [],
+      medications: medications.entry?.map((entry: any) => entry.resource) || [],
+      diagnosticReports: diagnosticReports.entry?.map((entry: any) => entry.resource) || [],
+      medicalReports: patient.medicalReports || []
+    };
+
+    res.status(200).json({
+      success: true,
+      data: medicalHistory
+    });
+  } catch (error) {
+    console.error('Error getting patient medical history:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server Error'
+    });
+  }
+};
+
+// Remove doctor from patient
+export const removeDoctorFromPatient = async (req: Request, res: Response) => {
+  try {
+    const { id, doctorId } = req.params;
+
+    // Check if patient exists
+    const patient = await PatientModel.findOne({ id });
+    if (!patient) {
+      return res.status(404).json({
+        success: false,
+        error: 'Patient not found'
+      });
+    }
+
+    // Check if doctor exists
+    const doctor = await DoctorModel.findById(doctorId);
+    if (!doctor) {
+      return res.status(404).json({
+        success: false,
+        error: 'Doctor not found'
+      });
+    }
+
+    // Remove doctor from patient
+    await PatientModel.findOneAndUpdate(
+      { id },
+      { $pull: { doctors: doctorId } }
+    );
+
+    // Remove patient from doctor
+    await DoctorModel.findByIdAndUpdate(
+      doctorId,
+      { $pull: { patients: patient._id } }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Doctor removed from patient successfully'
+    });
+  } catch (error) {
+    console.error('Error removing doctor from patient:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server Error'
+    });
+  }
+};
+
+// Get patient's medical reports
+export const getPatientMedicalReports = async (req: Request, res: Response) => {
+  try {
+    const patient = await PatientModel.findOne({ id: req.params.id })
+      .populate({
+        path: 'medicalReports',
+        populate: {
+          path: 'doctorId',
+          select: 'name specialty'
+        }
+      });
+    
+    if (!patient) {
+      return res.status(404).json({
+        success: false,
+        error: 'Patient not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      count: patient.medicalReports.length,
+      data: patient.medicalReports
+    });
+  } catch (error) {
+    console.error('Error getting patient medical reports:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server Error'
+    });
+  }
+};
+
+// Get patient's doctors
+export const getPatientDoctors = async (req: Request, res: Response) => {
+  try {
+    const patient = await PatientModel.findOne({ id: req.params.id })
+      .populate('doctors', 'name specialty hospitalId qualifications yearsOfExperience consultationFee');
+    
+    if (!patient) {
+      return res.status(404).json({
+        success: false,
+        error: 'Patient not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      count: patient.doctors.length,
+      data: patient.doctors
+    });
+  } catch (error) {
+    console.error('Error getting patient doctors:', error);
     res.status(500).json({
       success: false,
       error: 'Server Error'

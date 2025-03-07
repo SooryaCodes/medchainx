@@ -6,10 +6,11 @@ import {
   updatePatient,
   deletePatient,
   addDoctorToPatient,
-//   removeDoctorFromPatient,
-//   getPatientMedicalReports,
-//   getPatientDoctors,
-//   exportPatientFHIR
+  removeDoctorFromPatient,
+  getPatientMedicalReports,
+  getPatientDoctors,
+  exportPatientFHIR,
+  getPatientMedicalHistory
 } from '../controllers/patient.controller';
 import { protect, authorize } from '../middleware/auth';
 
@@ -36,5 +37,8 @@ router.get('/:id/doctors', protect, authorize('admin', 'doctor', 'hospital', 'pa
 
 // Export FHIR representation
 router.get('/:id/fhir', protect, authorize('admin', 'doctor', 'hospital', 'patient'), exportPatientFHIR);
+
+// Get patient's medical history
+router.get('/:id/medical-history', protect, authorize('admin', 'doctor', 'hospital', 'patient'), getPatientMedicalHistory);
 
 export default router; 

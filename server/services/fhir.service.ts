@@ -4,7 +4,7 @@ import { IPatient, IDoctor, IHospital, IMedicalReport } from '../models';
 
 // FHIR Server configuration
 const FHIR_SERVER_URL = process.env.FHIR_SERVER_URL || 'http://hapi.fhir.org/baseR4';
-const FHIR_API_KEY = process.env.FHIR_API_KEY;
+// const FHIR_API_KEY = process.env.FHIR_API_KEY;
 
 // Configure axios instance for FHIR server
 const fhirAxios = axios.create({
