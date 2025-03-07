@@ -7,7 +7,7 @@ export const setAuthCookies = (response: RegistrationResponse) => {
   
   if (response.success && response.data) {
     // Set cookies with expiry of 7 days
-    setCookie('patientToken', response.data.token, { path: '/', maxAge: 7 * 24 * 60 * 60 });
+    setCookie('patientToken', response.data.patientToken, { path: '/', maxAge: 7 * 24 * 60 * 60 });
     setCookie('patientId', response.data.patientId, { path: '/', maxAge: 7 * 24 * 60 * 60 });
     return true;
   }

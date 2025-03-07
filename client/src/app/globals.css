@@ -57,8 +57,8 @@
   --secondary-foreground: oklch(0.2 0.1 260);
   
   /* Accent Colors */
-  --accent: oklch(0.75 0.12 220);
-  --accent-foreground: oklch(0.1 0.05 220);
+  --accent: oklch(0.75 0.12 260);
+  --accent-foreground: oklch(0.1 0.05 260);
   
   /* Muted Colors */
   --muted: oklch(0.96 0.03 250);
@@ -136,7 +136,7 @@ body::before {
 /* Button Enhancements */
 .btn-primary {
   @apply bg-primary text-primary-foreground shadow-md hover:shadow-lg transition-all duration-300;
-  background: linear-gradient(to right, var(--primary), oklch(0.5 0.2 240));
+  background: linear-gradient(to right, var(--primary), oklch(0.5 0.2 260));
 }
 
 /* Form Element Styling */

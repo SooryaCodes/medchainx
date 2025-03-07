@@ -98,10 +98,19 @@ export const PatientProvider: React.FC<PatientProviderProps> = ({ children }) =>
   }, [cookies.patientToken]);
 
   const logout = () => {
-    removeCookie('patientToken');
-    removeCookie('patientId');
+    // Clear cookies with the same path and domain options used when setting them
+    removeCookie('patientToken', { path: '/' });
+    removeCookie('patientId', { path: '/' });
+    
+    // Also clear any MedChainX related tokens
+    document.cookie = "medToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    document.cookie = "medTokenExpiry=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    document.cookie = "medTokenCreated=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    
     setToken(null);
     setPatient(null);
+    
+    // Force a redirect to register page
     router.push('/register');
   };
 
