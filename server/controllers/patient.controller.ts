@@ -1,58 +1,8 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
-import { PatientModel, IPatient } from '../models';
-
-// Helper function to create FHIR Patient resource
-const createFHIRPatient = (patientData: any) => {
-  return {
-    resourceType: "Patient",
-    id: uuidv4(),
-    name: [
-      {
-        use: "official",
-        family: patientData.name.family,
-        given: patientData.name.given
-      }
-    ],
-    gender: patientData.gender,
-    birthDate: patientData.birthDate,
-    telecom: [
-      patientData.contact.phone ? {
-        system: "phone",
-        value: patientData.contact.phone,
-        use: "home"
-      } : null,
-      patientData.contact.email ? {
-        system: "email",
-        value: patientData.contact.email
-      } : null
-    ].filter(Boolean),
-    contact: [
-      {
-        relationship: [
-          {
-            coding: [
-              {
-                system: "http://terminology.hl7.org/CodeSystem/v2-0131",
-                code: "C",
-                display: "Emergency Contact"
-              }
-            ]
-          }
-        ],
-        name: {
-          text: patientData.emergencyContact.name
-        },
-        telecom: [
-          {
-            system: "phone",
-            value: patientData.emergencyContact.phone
-          }
-        ]
-      }
-    ]
-  };
-};
+import { PatientModel, IPatient, HospitalModel, DoctorModel } from '../models';
+import { FHIRService } from '../services/fhir.service';
 
 // Register a new patient
 export const registerPatient = async (req: Request, res: Response) => {
@@ -62,17 +12,43 @@ export const registerPatient = async (req: Request, res: Response) => {
       birthDate,
       gender,
       contact,
+      address,
       emergencyContact,
-      hospitalId
+      hospitalId,
+      preferredLanguage,
+      nationality,
+      allergies,
+      bloodType,
+      insuranceInfo
     } = req.body;
 
+    // Validate required fields
+    if (!name || !name.given || !name.family || !birthDate || !gender || !emergencyContact || !hospitalId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please provide all required fields: name (given and family), birthDate, gender, emergencyContact, and hospitalId'
+      });
+    }
+
+    // Check if hospital exists
+    const hospital = await HospitalModel.findById(hospitalId);
+    if (!hospital) {
+      return res.status(404).json({
+        success: false,
+        error: 'Hospital not found'
+      });
+    }
+
     // Create FHIR Patient resource
-    const fhirPatient = createFHIRPatient({
+    const fhirPatient = await FHIRService.createPatient({
       name,
       birthDate,
       gender,
       contact,
-      emergencyContact
+      address,
+      emergencyContact,
+      preferredLanguage,
+      nationality
     });
 
     // Create MongoDB patient document
@@ -86,11 +62,21 @@ export const registerPatient = async (req: Request, res: Response) => {
       emergencyContact,
       hospitalId,
       doctors: [],
-      medicalReports: []
+      medicalReports: [],
+      // Additional fields not in FHIR but useful for the application
+      allergies: allergies || [],
+      bloodType,
+      insuranceInfo
     });
 
     // Save patient to MongoDB
     await patient.save();
+
+    // Update hospital with new patient
+    await HospitalModel.findByIdAndUpdate(
+      hospitalId,
+      { $push: { patients: patient._id } }
+    );
 
     res.status(201).json({
       success: true,
@@ -99,8 +85,26 @@ export const registerPatient = async (req: Request, res: Response) => {
         patient
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error registering patient:', error);
+    
+    // Handle duplicate key error
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        error: 'Patient with this ID already exists'
+      });
+    }
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map((val: any) => val.message);
+      return res.status(400).json({
+        success: false,
+        error: messages.join(', ')
+      });
+    }
+    
     res.status(500).json({
       success: false,
       error: 'Server Error'
@@ -111,11 +115,81 @@ export const registerPatient = async (req: Request, res: Response) => {
 // Get all patients
 export const getPatients = async (req: Request, res: Response) => {
   try {
-    const patients = await PatientModel.find();
+    // Implement pagination
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const startIndex = (page - 1) * limit;
+    
+    // Implement filtering
+    const filter: any = {};
+    
+    if (req.query.gender) {
+      filter.gender = req.query.gender;
+    }
+    
+    if (req.query.hospitalId) {
+      filter.hospitalId = req.query.hospitalId;
+    }
+    
+    // For doctor users, only show their patients
+    if (req.user?.role === 'doctor' && req.user.doctorId) {
+      filter.doctors = req.user.doctorId;
+    }
+    
+    // For hospital users, only show their patients
+    if (req.user?.role === 'hospital' && req.user.hospitalId) {
+      filter.hospitalId = req.user.hospitalId;
+    }
+    
+    // Count total documents for pagination
+    const total = await PatientModel.countDocuments(filter);
+    
+    // Get patients with pagination
+    const patients = await PatientModel.find(filter)
+      .populate('hospitalId', 'name')
+      .skip(startIndex)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+    
+    // If FHIR search is requested
+    if (req.query.fhir === 'true') {
+      // Convert MongoDB query to FHIR search parameters
+      const fhirParams: any = {};
+      
+      if (req.query.gender) {
+        fhirParams.gender = req.query.gender;
+      }
+      
+      if (req.query.name) {
+        fhirParams.name = req.query.name;
+      }
+      
+      // Search FHIR server
+      const fhirResults = await FHIRService.searchResources('Patient', fhirParams);
+      
+      return res.status(200).json({
+        success: true,
+        count: patients.length,
+        pagination: {
+          total,
+          page,
+          pages: Math.ceil(total / limit)
+        },
+        data: {
+          mongoDb: patients,
+          fhir: fhirResults
+        }
+      });
+    }
     
     res.status(200).json({
       success: true,
       count: patients.length,
+      pagination: {
+        total,
+        page,
+        pages: Math.ceil(total / limit)
+      },
       data: patients
     });
   } catch (error) {
