@@ -1,19 +1,34 @@
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
+import { google } from 'googleapis';
 import { IPatient, IDoctor, IHospital, IMedicalReport } from '../models';
 
-// FHIR Server configuration
-const FHIR_SERVER_URL = process.env.FHIR_SERVER_URL || 'http://hapi.fhir.org/baseR4';
-// const FHIR_API_KEY = process.env.FHIR_API_KEY;
+// Google Cloud Healthcare API configuration
+const GOOGLE_CLOUD_PROJECT = process.env.GOOGLE_CLOUD_PROJECT;
+const GOOGLE_CLOUD_LOCATION = process.env.GOOGLE_CLOUD_LOCATION || 'us-central1';
+const GOOGLE_CLOUD_DATASET = process.env.GOOGLE_CLOUD_DATASET;
+const GOOGLE_CLOUD_FHIR_STORE = process.env.GOOGLE_CLOUD_FHIR_STORE;
+const CLIENT_ID = process.env.GOOGLE_CLOUD_CLIENT_ID;
+
+// Configure Google Auth Client
+const auth = new google.auth.GoogleAuth({
+  clientId: CLIENT_ID,
+  scopes: ['https://www.googleapis.com/auth/cloud-healthcare']
+});
 
 // Configure axios instance for FHIR server
-const fhirAxios = axios.create({
-  baseURL: FHIR_SERVER_URL,
-  headers: {
-    'Content-Type': 'application/fhir+json',
-    ...(FHIR_API_KEY && { 'Authorization': `Bearer ${FHIR_API_KEY}` })
-  }
-});
+const getFhirAxios = async () => {
+  const token = await auth.getAccessToken();
+  const baseURL = `https://healthcare.googleapis.com/v1/projects/${GOOGLE_CLOUD_PROJECT}/locations/${GOOGLE_CLOUD_LOCATION}/datasets/${GOOGLE_CLOUD_DATASET}/fhirStores/${GOOGLE_CLOUD_FHIR_STORE}/fhir`;
+  
+  return axios.create({
+    baseURL,
+    headers: {
+      'Content-Type': 'application/fhir+json',
+      'Authorization': `Bearer ${token}`
+    }
+  });
+};
 
 /**
  * FHIR Service class to handle all FHIR-related operations
@@ -24,6 +39,7 @@ export class FHIRService {
    */
   static createPatient = async (patientData: any): Promise<any> => {
     try {
+      const fhirAxios = await getFhirAxios();
       const patientId = patientData.id || uuidv4();
       
       const fhirPatient = {
@@ -141,6 +157,7 @@ export class FHIRService {
   static updatePatient = async (patientId: string, patientData: any): Promise<any> => {
     try {
       // First, get the current FHIR Patient
+      const fhirAxios = await getFhirAxios();
       const currentPatient = await this.getPatient(patientId);
       
       // Update the patient data
@@ -216,6 +233,7 @@ export class FHIRService {
    */
   static getPatient = async (patientId: string): Promise<any> => {
     try {
+      const fhirAxios = await getFhirAxios();
       const response = await fhirAxios.get(`/Patient/${patientId}`);
       return response.data;
     } catch (error) {
@@ -229,6 +247,7 @@ export class FHIRService {
    */
   static deletePatient = async (patientId: string): Promise<any> => {
     try {
+      const fhirAxios = await getFhirAxios();
       const response = await fhirAxios.delete(`/Patient/${patientId}`);
       return response.data;
     } catch (error) {
@@ -242,6 +261,7 @@ export class FHIRService {
    */
   static createPractitioner = async (doctorData: any): Promise<any> => {
     try {
+      const fhirAxios = await getFhirAxios();
       const practitionerId = doctorData.id || uuidv4();
       
       const fhirPractitioner = {
@@ -303,6 +323,7 @@ export class FHIRService {
    */
   static createOrganization = async (hospitalData: any): Promise<any> => {
     try {
+      const fhirAxios = await getFhirAxios();
       const organizationId = hospitalData.id || uuidv4();
       
       const fhirOrganization = {
@@ -372,6 +393,7 @@ export class FHIRService {
    */
   static createEncounter = async (encounterData: any): Promise<any> => {
     try {
+      const fhirAxios = await getFhirAxios();
       const encounterId = uuidv4();
       
       const fhirEncounter = {
@@ -416,6 +438,7 @@ export class FHIRService {
    */
   static createDiagnosticReport = async (reportData: any, encounterId: string): Promise<any> => {
     try {
+      const fhirAxios = await getFhirAxios();
       const reportId = uuidv4();
       
       const fhirDiagnosticReport = {
@@ -466,6 +489,7 @@ export class FHIRService {
    */
   static createMedicationRequest = async (prescriptionData: any, encounterId: string): Promise<any> => {
     try {
+      const fhirAxios = await getFhirAxios();
       const medicationRequests: any[] = [];
       
       for (const prescription of prescriptionData.prescriptions) {
@@ -554,9 +578,9 @@ export class FHIRService {
    */
   static searchResources = async (resourceType: string, params: any): Promise<any> => {
     try {
+      const fhirAxios = await getFhirAxios();
       const queryParams = new URLSearchParams();
       
-      // Add search parameters
       Object.entries(params).forEach(([key, value]) => {
         queryParams.append(key, value as string);
       });
