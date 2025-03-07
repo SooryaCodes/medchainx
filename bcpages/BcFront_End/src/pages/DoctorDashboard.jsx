@@ -3,24 +3,115 @@ import { useState } from "react";
 export default function DoctorDashboard() {
   const [token, setToken] = useState("");
   const [isAuthorized, setIsAuthorized] = useState(false);
-  const [activeTab, setActiveTab] = useState("lab");
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [selectedFiles, setSelectedFiles] = useState(new Set());
+  const [previewFile, setPreviewFile] = useState(null);
+  const [doctorNotes, setDoctorNotes] = useState("");
 
   const fakePatientData = {
     name: "John Doe",
     age: 45,
-    timeline: ["Checkup - Jan 2024", "X-Ray - Feb 2024", "Prescription - Mar 2024"],
-    healthMetrics: { bp: "120/80", sugar: "90 mg/dL", heartRate: "72 bpm" },
-    medicalRecords: {
-      lab: ["Blood Test - Normal", "MRI Scan - Clear"],
-      diagnosis: ["Hypertension"],
-      treatment: ["Medication - Amlodipine"],
-    },
-    appointments: ["March 10, 2025 - 10:30 AM", "April 5, 2025 - 2:00 PM"],
+    condition: "Hypertension, Diabetes",
+    bloodType: "O+",
+    gender: "Male",
+    nationality: "American",
   };
 
   const handleAuth = () => {
     if (token === "token123") setIsAuthorized(true);
     else alert("Invalid Token");
+  };
+
+  const handleFileChange = (e) => {
+    setSelectedFile(e.target.files[0]);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setSelectedFile(e.dataTransfer.files[0]);
+  };
+
+  const handleUpload = () => {
+    if (!selectedFile) {
+      alert("No file selected");
+      return;
+    }
+
+    const newFile = {
+      id: Date.now(),
+      name: selectedFile.name,
+      type: selectedFile.type,
+      date: new Date().toLocaleString(),
+      url: URL.createObjectURL(selectedFile),
+      isUploaded: false,
+    };
+
+    setUploadedFiles([newFile, ...uploadedFiles]);
+    setSelectedFile(null);
+    alert("File added to history!");
+  };
+
+  const handleSaveNotes = () => {
+    if (!doctorNotes.trim()) {
+      alert("Note is empty");
+      return;
+    }
+
+    const noteBlob = new Blob([doctorNotes], { type: "text/plain" });
+    const noteFile = new File([noteBlob], `Doctor_Note_${Date.now()}.txt`, { type: "text/plain" });
+
+    const newFile = {
+      id: Date.now(),
+      name: noteFile.name,
+      type: "text/plain",
+      date: new Date().toLocaleString(),
+      url: URL.createObjectURL(noteFile),
+      isUploaded: false,
+    };
+
+    setUploadedFiles([newFile, ...uploadedFiles]);
+    setDoctorNotes("");
+    alert("Doctor's note saved to history!");
+  };
+
+  const handleDeleteFile = (fileId) => {
+    setUploadedFiles(uploadedFiles.filter(file => file.id !== fileId));
+    if (previewFile?.id === fileId) setPreviewFile(null);
+  };
+
+  const toggleFileSelection = (fileId) => {
+    setSelectedFiles(prev => {
+      const newSelection = new Set(prev);
+      if (newSelection.has(fileId)) newSelection.delete(fileId);
+      else newSelection.add(fileId);
+      return newSelection;
+    });
+  };
+
+  const handleUploadToServer = () => {
+    if (selectedFiles.size === 0) {
+      alert("No files selected for upload");
+      return;
+    }
+
+    setUploadedFiles(prevFiles =>
+      prevFiles.map(file =>
+        selectedFiles.has(file.id) ? { ...file, isUploaded: true } : file
+      )
+    );
+    setSelectedFiles(new Set());
+    alert("Selected files uploaded to server!");
+  };
+
+  const handlePreviewNavigation = (direction) => {
+    if (!previewFile) return;
+    const currentIndex = uploadedFiles.findIndex(file => file.id === previewFile.id);
+    if (direction === 'prev' && currentIndex < uploadedFiles.length - 1) {
+      setPreviewFile(uploadedFiles[currentIndex + 1]);
+    } else if (direction === 'next' && currentIndex > 0) {
+      setPreviewFile(uploadedFiles[currentIndex - 1]);
+    }
   };
 
   return (
@@ -36,78 +127,110 @@ export default function DoctorDashboard() {
           />
           <button
             onClick={handleAuth}
-            className="mt-2 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+            className="mt-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
           >
             Authenticate
           </button>
         </div>
       ) : (
         <>
-          {/* Patient Info */}
-          <div className="bg-white shadow-md p-4 rounded-md">
-            <h2 className="text-xl font-bold">
-              {fakePatientData.name}, {fakePatientData.age}
-            </h2>
-            <p className="text-gray-500">Medical Timeline</p>
-            <ul className="list-disc ml-4">
-              {fakePatientData.timeline.map((event, index) => (
-                <li key={index}>{event}</li>
-              ))}
-            </ul>
-          </div>
+          {/* Patient Info and Upload Section */}
+          <div className="flex space-x-4">
+            {/* Patient Info */}
+            <div className="bg-white shadow-md p-4 rounded-lg w-1/3 text-center border">
+              <h2 className="text-xl font-bold">{fakePatientData.name}</h2>
+              <p className="text-gray-500">Age: {fakePatientData.age}</p>
+              <p className="text-gray-600">{fakePatientData.condition}</p>
+              <p className="text-gray-600">Blood Type: {fakePatientData.bloodType}</p>
+              <p className="text-gray-600">Gender: {fakePatientData.gender}</p>
+              <p className="text-gray-600">Nationality: {fakePatientData.nationality}</p>
+            </div>
 
-          {/* Health Metrics */}
-          <div className="bg-white shadow-md p-4 rounded-md">
-            <h2 className="text-xl font-bold">Health Metrics</h2>
-            <p>Blood Pressure: {fakePatientData.healthMetrics.bp}</p>
-            <p>Blood Sugar: {fakePatientData.healthMetrics.sugar}</p>
-            <p>Heart Rate: {fakePatientData.healthMetrics.heartRate}</p>
-          </div>
-
-          {/* Tab Section */}
-          <div className="bg-white shadow-md p-4 rounded-md">
-            <div className="flex gap-4 mb-2">
-              {["lab", "diagnosis", "treatment"].map((tab) => (
-                <button
-                  key={tab}
-                  className={`px-4 py-2 rounded-md ${
-                    activeTab === tab ? "bg-blue-500 text-white" : "bg-gray-200"
-                  }`}
-                  onClick={() => setActiveTab(tab)}
-                >
-                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {/* Upload & Notes Section */}
+            <div className="bg-white shadow-md p-4 rounded-lg w-2/3 border">
+              <div
+                className="border-dashed border-2 border-gray-400 p-10 text-center cursor-pointer rounded-md"
+                onDrop={handleDrop}
+                onDragOver={(e) => e.preventDefault()}
+              >
+                {selectedFile ? selectedFile.name : "Drop files here"}
+              </div>
+              <input type="file" onChange={handleFileChange} className="mt-2 hidden" id="fileInput" />
+              <label htmlFor="fileInput" className="block text-center text-blue-600 cursor-pointer mt-2">
+                Or Click to Select File
+              </label>
+              <textarea
+                className="w-full h-20 p-2 border mt-4 rounded-md"
+                placeholder="Type here..."
+                value={doctorNotes}
+                onChange={(e) => setDoctorNotes(e.target.value)}
+              ></textarea>
+              <div className="flex space-x-2 mt-3">
+                <button onClick={handleUpload} className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex-1">
+                  Add to History
                 </button>
+                <button onClick={handleSaveNotes} className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex-1">
+                  Save Note
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* File History Section */}
+          <div className="bg-white shadow-md p-4 rounded-md mt-4 border">
+            <h2 className="text-xl font-bold">File History</h2>
+            <button onClick={handleUploadToServer} className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 mb-2">
+              Upload Selected
+            </button>
+            <div className="flex flex-col space-y-2 mt-2">
+              {uploadedFiles.map((file) => (
+                <div key={file.id} className="p-2 border rounded-lg shadow flex justify-between items-center text-sm">
+                  <input type="checkbox" checked={selectedFiles.has(file.id)} onChange={() => toggleFileSelection(file.id)} />
+                  <div onClick={() => setPreviewFile(file)} className="cursor-pointer hover:text-blue-600">{file.name}</div>
+                  <button onClick={() => handleDeleteFile(file.id)} className="text-red-500">Delete</button>
+                </div>
               ))}
             </div>
-            <ul className="list-disc ml-4">
-              {fakePatientData.medicalRecords[activeTab].map((item, index) => (
-                <li key={index}>{item}</li>
-              ))}
-            </ul>
           </div>
 
-          {/* Appointments */}
-          <div className="bg-white shadow-md p-4 rounded-md">
-            <h2 className="text-xl font-bold">Upcoming Appointments</h2>
-            <ul className="list-disc ml-4">
-              {fakePatientData.appointments.map((appt, index) => (
-                <li key={index}>{appt}</li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Prescription */}
-          <div className="bg-white shadow-md p-4 rounded-md">
-            <h2 className="text-xl font-bold">Prescription</h2>
-            <input
-              type="text"
-              placeholder="Enter Prescription"
-              className="w-full p-2 border rounded-md"
-            />
-            <button className="mt-2 bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600">
-              Save Prescription
-            </button>
-          </div>
+          {/* Preview Popup */}
+          {previewFile && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white p-4 rounded-2xl shadow-lg max-w-md w-full relative">
+                <button
+                  onClick={() => setPreviewFile(null)}
+                  className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+                >
+                  ✕
+                </button>
+                <h3 className="text-lg font-semibold text-center mb-4">{previewFile.name}</h3>
+                <div className="flex items-center">
+                  <button
+                    onClick={() => handlePreviewNavigation('prev')}
+                    className="text-gray-500 hover:text-gray-700 text-4xl disabled:opacity-50 mr-4"
+                    disabled={uploadedFiles.findIndex(f => f.id === previewFile.id) === uploadedFiles.length - 1}
+                  >
+                    ◄
+                  </button>
+                  <div className="max-h-64 overflow-auto flex-1">
+                    {previewFile.type.startsWith('image/') ? (
+                      <img src={previewFile.url} alt={previewFile.name} className="max-w-full h-auto" />
+                    ) : (
+                      <iframe src={previewFile.url} className="w-full h-64" title={previewFile.name} />
+                    )}
+                  </div>
+                  <button
+                    onClick={() => handlePreviewNavigation('next')}
+                    className="text-gray-500 hover:text-gray-700 text-4xl disabled:opacity-50 ml-4"
+                    disabled={uploadedFiles.findIndex(f => f.id === previewFile.id) === 0}
+                  >
+                    ►
+                  </button>
+                </div>
+                <p className="text-sm text-gray-500 mt-2 text-center">Uploaded: {previewFile.date}</p>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
