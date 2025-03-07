@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useLocation, useParams } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import UserDashboard from "./pages/UserDashboard";
 import DoctorDashboard from "./pages/DoctorDashboard";
@@ -7,6 +7,11 @@ import Help from "./pages/Help";
 import Login from "./pages/Login";
 import Settings from "./pages/Settings";
 import BlockchainView from "./pages/BlockchainView"; // Import the new component
+
+const UserDashboardWrapper = () => {
+    const { userId } = useParams();
+    return <UserDashboard userId={userId} />;
+};
 
 const AppRoutes = () => {
   const location = useLocation();

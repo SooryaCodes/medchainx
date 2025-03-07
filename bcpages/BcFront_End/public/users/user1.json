@@ -1,0 +1,57 @@
+{
+    "patient_id": "P1001",
+    "general_info": {
+      "name": "John Doe",
+      "age": 45,
+      "gender": "Male",
+      "blood_type": "O+",
+      "contact": {
+        "phone": "+1 234 567 890",
+        "email": "johndoe@example.com"
+      },
+      "address": "123 Elm Street, Springfield, USA"
+    },
+    "medical_history": {
+      "diseases": [
+        {
+          "name": "Hypertension",
+          "diagnosed_on": "2022-05-15",
+          "medications": [
+            {"name": "Amlodipine", "dosage": "5mg daily"}
+          ]
+        },
+        {
+          "name": "Type 2 Diabetes",
+          "diagnosed_on": "2018-09-20",
+          "medications": [
+            {"name": "Metformin", "dosage": "500mg twice daily"}
+          ]
+        }
+      ],
+      "scan_reports": [
+        {
+          "type": "Chest X-ray",
+          "date": "2024-02-10",
+          "result": "Mild pleural thickening, no active infection"
+        },
+        {
+          "type": "MRI Brain",
+          "date": "2023-11-05",
+          "result": "No abnormalities detected"
+        }
+      ],
+      "lab_values": {
+        "HbA1c": {
+          "value": "6.8%",
+          "date": "2024-01-12",
+          "normal_range": "4.0% - 5.6%"
+        },
+        "Blood Pressure": {
+          "value": "140/90 mmHg",
+          "date": "2024-02-01",
+          "normal_range": "120/80 mmHg"
+        }
+      }
+    }
+  }
+  

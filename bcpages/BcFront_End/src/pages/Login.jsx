@@ -11,6 +11,8 @@ const Login = ({ onClose }) => {
         } else {
             navigate("/user-dashboard");
         }
+        
+        onClose(); // Close the modal after navigating
     };
 
     // Closes modal when clicking outside
@@ -43,7 +45,7 @@ const Login = ({ onClose }) => {
                     <option value="doctor">Doctor</option>
                 </select>
                 <button 
-                    className="w-full bg-blue-500 text-white py-2 rounded"
+                    className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600"
                     onClick={handleLogin}
                 >
                     Enter

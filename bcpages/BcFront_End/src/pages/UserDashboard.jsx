@@ -75,6 +75,4 @@ const UserDashboard = () => {
       </Card>
     </div>
   );
-};
-
-export default UserDashboard;
+}
