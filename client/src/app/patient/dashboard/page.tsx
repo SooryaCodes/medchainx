@@ -445,14 +445,36 @@ export default function PatientDashboard() {
     // Don't reset token state, just close the modal
   };
 
-  // Add MedChainX branding
+  // Add MedChainX branding - Updated with white bg and blue theme
   const renderMedChainX = () => (
-    <div className="mb-6 p-4 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg text-white">
-      <h2 className="text-2xl font-bold">MedChainX</h2>
-      <p>Your secure blockchain-based medical records platform</p>
+    <div className="mb-6 p-4 bg-white dark:bg-gray-800 rounded-lg border-2 border-blue-500 shadow-md hover:shadow-lg transition-all overflow-hidden relative">
+      <div className="flex items-center justify-between">
+        <div className="z-10">
+          <h2 className="text-2xl font-bold text-blue-600 dark:text-blue-400">MedChainX</h2>
+          <p className="text-gray-600 dark:text-gray-300">Your secure blockchain-based medical records platform</p>
+        </div>
+        <div className="flex items-center">
+          <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 mr-2">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
+        </div>
+      </div>
+      
+      {/* Animated elements */}
+      <div className="absolute -right-12 -top-12 h-24 w-24 bg-blue-100 dark:bg-blue-900/20 rounded-full opacity-50 animate-pulse"></div>
+      <div className="absolute right-20 bottom-0 h-3 w-3 bg-blue-400 dark:bg-blue-600 rounded-full animate-ping"></div>
+      <div className="absolute left-1/2 bottom-2 h-2 w-2 bg-blue-300 dark:bg-blue-500 rounded-full animate-pulse"></div>
+      
+      {/* Animated line */}
+      <div className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-blue-400 to-blue-600 animate-pulse" style={{
+        width: '100%',
+        animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+      }}></div>
     </div>
-  );
-  
+  )
+
   // If loading, show loading state
   if (loading) {
     return (
@@ -825,7 +847,7 @@ export default function PatientDashboard() {
           />
         )}
         
-        {/* Main Dashboard Tabs */}
+        {/* Main Dashboard Tabs - REVERTED TO ORIGINAL */}
         <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid grid-cols-5 md:w-[750px]">
             <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -837,13 +859,8 @@ export default function PatientDashboard() {
           
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
-            {/* Patient Information Card */}
-
-
-
-            
-            {/* Prominent Token Generation Card - Enhanced with active token display */}
-            <Card className={`${generatedToken ? 'bg-gradient-to-r from-blue-500 to-blue-700 dark:from-blue-600 dark:to-blue-800' : 'bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700'} text-white hover:shadow-lg transition-all border-none mb-6`}>
+            {/* Token Generation Card - REVERTED TO ORIGINAL */}
+            <Card className={`${generatedToken ? 'bg-gradient-to-r from-blue-500 to-blue-700' : 'bg-gradient-to-r from-blue-500 to-blue-600'} text-white hover:shadow-lg transition-all border-none mb-6`}>
               <CardContent className="pt-6">
                 <div className="flex flex-col md:flex-row items-center justify-between">
                   <div className="flex items-center mb-4 md:mb-0">
