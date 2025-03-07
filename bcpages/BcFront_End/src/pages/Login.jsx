@@ -1,63 +1,56 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-const Login = ({ onClose, setUser, show }) => {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [role, setRole] = useState("doctor");
-  const navigate = useNavigate();
+const Login = ({ onClose }) => {
+    const [role, setRole] = useState("patient");
+    const navigate = useNavigate();
 
-  if (!show) return null;
+    const handleLogin = () => {
+        if (role === "doctor") {
+            navigate("/doctor-dashboard");
+        } else {
+            navigate("/user-dashboard");
+        }
+    };
 
-  const handleLogin = () => {
-    if (
-      (role === "doctor" && username === "doctor" && password === "password") ||
-      (role === "patient" && username === "patient" && password === "password")
-    ) {
-      localStorage.setItem("userRole", role);
-      setUser(role);
-      onClose();
-      navigate(role === "doctor" ? "/DoctorDashboard" : "/UserDashboard");
-    } else {
-      alert("Invalid credentials");
-    }
-  };
+    // Closes modal when clicking outside
+    const handleOverlayClick = (e) => {
+        if (e.target.id === "login-modal") onClose();
+    };
 
-  return (
-    <div className="fixed inset-0 flex justify-center items-center bg-black bg-opacity-50">
-      <div className="bg-white p-6 rounded-lg shadow-lg relative w-96">
-        <button onClick={onClose} className="absolute top-2 right-2 text-gray-600 hover:text-gray-900">
-          &times;
-        </button>
-        <h2 className="text-xl font-bold mb-4">Login</h2>
-        <select
-          value={role}
-          onChange={(e) => setRole(e.target.value)}
-          className="w-full p-2 border rounded mb-2"
+    return (
+        <div 
+            id="login-modal"
+            className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 transition-opacity duration-300"
+            onClick={handleOverlayClick}
         >
-          <option value="doctor">Doctor</option>
-          <option value="patient">Patient</option>
-        </select>
-        <input
-          type="text"
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          className="w-full p-2 border rounded mb-2"
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full p-2 border rounded mb-4"
-        />
-        <button onClick={handleLogin} className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">
-          Login
-        </button>
-      </div>
-    </div>
-  );
+            <div className="p-6 bg-white rounded shadow-md w-80 relative animate-fade-in">
+                {/* Close button */}
+                <button 
+                    className="absolute top-2 right-2 text-gray-600 hover:text-gray-900"
+                    onClick={onClose}
+                >
+                    ✕
+                </button>
+                
+                <h2 className="text-xl font-semibold mb-4">Enter</h2>
+                <select 
+                    className="w-full p-2 border rounded mb-4"
+                    value={role} 
+                    onChange={(e) => setRole(e.target.value)}
+                >
+                    <option value="patient">Patient</option>
+                    <option value="doctor">Doctor</option>
+                </select>
+                <button 
+                    className="w-full bg-blue-500 text-white py-2 rounded"
+                    onClick={handleLogin}
+                >
+                    Enter
+                </button>
+            </div>
+        </div>
+    );
 };
 
 export default Login;
