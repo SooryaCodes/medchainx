@@ -3,6 +3,8 @@ import { Manrope } from "next/font/google";
 import "./globals.css";
 import { Toaster } from 'react-hot-toast';
 import Providers from '@/components/Providers';
+import { PatientProvider } from '@/context/PatientContext';
+import { DoctorProvider } from '@/context/DoctorContext';
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -24,9 +26,13 @@ export default function RootLayout({
       <body
         className={`${manrope.variable} ${manrope.className} antialiased`}
       >
-        <Providers>
-          {children}
-        </Providers>
+        <PatientProvider>
+          <DoctorProvider>
+            <Providers>
+              {children}
+            </Providers>
+          </DoctorProvider>
+        </PatientProvider>
         <Toaster position="top-right" />
       </body>
     </html>

@@ -4,11 +4,21 @@ import type { NextRequest } from 'next/server';
 export function middleware(request: NextRequest) {
   const patientToken = request.cookies.get('patientToken')?.value;
   const patientId = request.cookies.get('patientId')?.value;
+  const doctorToken = request.cookies.get('doctorToken')?.value;
+  const doctorId = request.cookies.get('doctorId')?.value;
   
   // Check if the path starts with /patient
   if (request.nextUrl.pathname.startsWith('/patient')) {
     // If no token or patientId, redirect to register page
     if (!patientToken || !patientId) {
+      return NextResponse.redirect(new URL('/register', request.url));
+    }
+  }
+  
+  // Check if the path starts with /doctor
+  if (request.nextUrl.pathname.startsWith('/doctor')) {
+    // If no token or doctorId, redirect to register page
+    if (!doctorToken || !doctorId) {
       return NextResponse.redirect(new URL('/register', request.url));
     }
   }
@@ -25,5 +35,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/patient/:path*', '/register'],
+  matcher: ['/patient/:path*', '/doctor/:path*', '/register'],
 }; 

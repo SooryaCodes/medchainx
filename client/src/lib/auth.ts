@@ -48,4 +48,18 @@ export const registerPatient = async (patientData: any) => {
   } catch (error) {
     throw error;
   }
+};
+
+export const loginDoctor = async (username: string, password: string) => {
+  try {
+    const response = await axiosInstance.post('/auth/login', {
+      username,
+      password,
+      role: 'doctor'
+    });
+    
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
 }; 
