@@ -90,8 +90,12 @@ export const PatientProvider: React.FC<PatientProviderProps> = ({ children }) =>
       fetchPatient();
     } else {
       setLoading(false);
-      // Redirect to register page if not on register page already
-      if (typeof window !== 'undefined' && !window.location.pathname.includes('/register')) {
+      // Only redirect to register page if trying to access protected routes
+      // Don't redirect if on home page or register page
+      if (typeof window !== 'undefined' && 
+          !window.location.pathname.includes('/register') && 
+          !window.location.pathname.includes('/') && 
+          window.location.pathname !== '/') {
         router.push('/register');
       }
     }

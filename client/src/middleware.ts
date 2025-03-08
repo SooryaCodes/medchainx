@@ -2,6 +2,13 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
+  // Skip middleware for the home page and public pages
+  if (request.nextUrl.pathname === '/' || 
+      request.nextUrl.pathname.startsWith('/_next') || 
+      request.nextUrl.pathname.startsWith('/api')) {
+    return NextResponse.next();
+  }
+
   const patientToken = request.cookies.get('patientToken')?.value;
   const patientId = request.cookies.get('patientId')?.value;
   const doctorToken = request.cookies.get('doctorToken')?.value;
@@ -38,5 +45,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/patient/:path*', '/doctor/:path*', '/register'],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 }; 
