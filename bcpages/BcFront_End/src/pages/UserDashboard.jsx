@@ -1,102 +1,60 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
-export default function PatientDashboard({ userId }) {
-  const [previewFile, setPreviewFile] = useState(null);
-  const [showBase64, setShowBase64] = useState(false);
-  const [patientData, setPatientData] = useState(null);
+export default function App() {
+  const [userId, setUserId] = useState("");
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [token, setToken] = useState(null);
+  const [medicalRecords, setMedicalRecords] = useState([
+    { id: 1, name: "Blood Test Report", date: "2025-03-07" },
+    { id: 2, name: "X-Ray Scan", date: "2025-03-06" },
+    { id: 3, name: "MRI Scan", date: "2025-03-05" },
+    { id: 4, name: "CT Scan", date: "2025-03-04" },
+  ]);
 
-  useEffect(() => {
-    if (!userId) return;
-    
-    fetch(`/users/${userId}.json`)
-      .then((response) => {
-        if (!response.ok) throw new Error("User data not found");
-        return response.json();
-      })
-      .then((data) => setPatientData(data))
-      .catch((err) => console.error("Error loading patient data:", err));
-  }, [userId]);
-
-  const handleDownload = (file) => {
-    if (!file?.base64) return;
-    
-    const link = document.createElement("a");
-    link.href = file.base64;
-    link.download = file.name;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const handlePreviewNavigation = (direction) => {
-    if (!previewFile || !patientData?.medicalHistory) return;
-    
-    const currentIndex = patientData.medicalHistory.findIndex(file => file.id === previewFile.id);
-    if (direction === "prev" && currentIndex < patientData.medicalHistory.length - 1) {
-      setPreviewFile(patientData.medicalHistory[currentIndex + 1]);
-    } else if (direction === "next" && currentIndex > 0) {
-      setPreviewFile(patientData.medicalHistory[currentIndex - 1]);
+  const handleLogin = () => {
+    if (userId) {
+      setLoggedIn(true);
     }
   };
 
-  const toggleBase64View = () => setShowBase64((prev) => !prev);
-
-  if (!patientData) return <div className="text-center text-gray-600">Loading patient data...</div>;
+  const generateToken = () => {
+    const newToken = Math.random().toString(36).substr(2, 8);
+    setToken(newToken);
+    setTimeout(() => setToken(null), 30 * 60 * 1000); // Expires in 30 min
+  };
 
   return (
-    <div className="p-6 space-y-4">
-      {/* Patient Info */}
-      <div className="bg-white shadow-md p-4 rounded-lg text-center border">
-        <h2 className="text-xl font-bold">{patientData.name}</h2>
-        <p className="text-gray-500">Age: {patientData.age}</p>
-        <p className="text-gray-600">{patientData.condition}</p>
-        <p className="text-gray-600">Blood Type: {patientData.bloodType}</p>
-        <p className="text-gray-600">Gender: {patientData.gender}</p>
-        <p className="text-gray-600">Nationality: {patientData.nationality}</p>
-      </div>
-
-      {/* Medical History */}
-      <div className="bg-white shadow-md p-4 rounded-md border">
-        <h2 className="text-xl font-bold">Medical History</h2>
-        <div className="flex flex-col space-y-2 mt-2">
-          {patientData.medicalHistory?.length ? (
-            patientData.medicalHistory.map((file) => (
-              <div key={file.id} className="p-2 border rounded-lg shadow flex justify-between items-center text-sm">
-                <div onClick={() => setPreviewFile(file)} className="cursor-pointer hover:text-blue-600">{file.name}</div>
-                <button onClick={() => handleDownload(file)} className="text-blue-600">Download</button>
-              </div>
-            ))
-          ) : (
-            <p className="text-gray-500">No medical history available.</p>
-          )}
+    <div className="flex items-center justify-center h-screen bg-gray-100">
+      {!loggedIn ? (
+        <div className="p-6 bg-white shadow-md rounded-lg text-center w-80">
+          <h2 className="text-xl font-bold mb-4">Patient Login</h2>
+          <input
+            type="text"
+            placeholder="Enter User ID"
+            className="w-full p-2 border rounded mb-4"
+            value={userId}
+            onChange={(e) => setUserId(e.target.value)}
+          />
+          <button onClick={handleLogin} className="w-full bg-blue-500 text-white p-2 rounded">
+            Login
+          </button>
         </div>
-      </div>
+      ) : (
+        <div className="p-6 bg-white shadow-md rounded-lg w-96">
+          <h2 className="text-xl font-bold mb-4">Patient Dashboard</h2>
+          <button onClick={generateToken} className="bg-green-500 text-white px-4 py-2 rounded mb-4 w-full">
+            Generate Access Token
+          </button>
+          {token && <p className="text-sm text-gray-600">Token: {token}</p>}
 
-      {/* Preview Popup */}
-      {previewFile && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-4 rounded-2xl shadow-lg max-w-md w-full relative">
-            <button onClick={() => setPreviewFile(null)} className="absolute top-2 right-2 text-gray-500 hover:text-gray-700">✕</button>
-            <h3 className="text-lg font-semibold text-center mb-4">{previewFile.name}</h3>
-            <div className="flex items-center">
-              <button onClick={() => handlePreviewNavigation("prev")} className="text-gray-500 hover:text-gray-700 text-4xl disabled:opacity-50 mr-4">◄</button>
-              <div className="max-h-64 overflow-auto flex-1">
-                {showBase64 ? (
-                  <textarea className="w-full h-64 p-2 border rounded-md text-sm" value={previewFile.base64} readOnly />
-                ) : previewFile.type.startsWith("image/") ? (
-                  <img src={previewFile.base64} alt={previewFile.name} className="max-w-full h-auto" />
-                ) : (
-                  <iframe src={previewFile.base64} className="w-full h-64" title={previewFile.name} />
-                )}
+          <h3 className="text-lg font-bold mt-4 mb-2">Medical Records</h3>
+          <div className="space-y-2">
+            {medicalRecords.map((record) => (
+              <div key={record.id} className="p-2 border rounded bg-gray-50 flex justify-between">
+                <span>{record.name}</span>
+                <span className="text-gray-500 text-sm">{record.date}</span>
               </div>
-              <button onClick={() => handlePreviewNavigation("next")} className="text-gray-500 hover:text-gray-700 text-4xl disabled:opacity-50 ml-4">►</button>
-            </div>
-            <div className="mt-2 text-center">
-              <p className="text-sm text-gray-500">Uploaded: {previewFile.date}</p>
-              <button onClick={toggleBase64View} className="mt-2 bg-gray-200 text-gray-700 px-3 py-1 rounded-md hover:bg-gray-300 text-sm">
-                {showBase64 ? "Show Preview" : "Show Base64"}
-              </button>
-            </div>
+            ))}
           </div>
         </div>
       )}
