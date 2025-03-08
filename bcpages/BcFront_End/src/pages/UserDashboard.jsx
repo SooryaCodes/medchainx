@@ -42,40 +42,66 @@ const UserDashboard = ({ userId }) => {
   if (!patientData) return <p>Loading patient data...</p>;
 
   return (
-    <div className="flex items-center justify-center h-screen bg-gray-100">
-      {!loggedIn ? (
-        <div className="p-6 bg-white shadow-md rounded-lg text-center w-80">
-          <h2 className="text-xl font-bold mb-4">Patient Login</h2>
-          <input
-            type="text"
-            placeholder="Enter User ID"
-            className="w-full p-2 border rounded mb-4"
-            value={userId}
-            onChange={(e) => setUserId(e.target.value)}
-          />
-          <button onClick={handleLogin} className="w-full bg-blue-500 text-white p-2 rounded">
-            Login
-          </button>
-        </div>
-      ) : (
-        <div className="p-6 bg-white shadow-md rounded-lg w-96">
-          <h2 className="text-xl font-bold mb-4">Patient Dashboard</h2>
-          <button onClick={generateToken} className="bg-green-500 text-white px-4 py-2 rounded mb-4 w-full">
-            Generate Access Token
-          </button>
-          {token && <p className="text-sm text-gray-600">Token: {token}</p>}
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-4">User Dashboard</h1>
 
-          <h3 className="text-lg font-bold mt-4 mb-2">Medical Records</h3>
-          <div className="space-y-2">
-            {medicalRecords.map((record) => (
-              <div key={record.id} className="p-2 border rounded bg-gray-50 flex justify-between">
-                <span>{record.name}</span>
-                <span className="text-gray-500 text-sm">{record.date}</span>
-              </div>
+      {/* Medical Timeline */}
+      <Card>
+        <CardContent>
+          <h2 className="text-xl font-semibold mb-2">Medical Timeline</h2>
+          <ul className="list-disc ml-4">
+            {patientData.medicalHistory.map((event, index) => (
+              <li key={index}>{event.diagnosedOn} - {event.condition}</li>
             ))}
+          </ul>
+        </CardContent>
+      </Card>
+
+      {/* Health Metrics */}
+      <Card className="mt-4">
+        <CardContent>
+          <h2 className="text-xl font-semibold mb-2">Health Metrics</h2>
+          <p>Heart Rate: {patientData.healthMetrics?.heartRate} bpm</p>
+          <p>Blood Pressure: {patientData.healthMetrics?.bloodPressure}</p>
+          <p>Weight: {patientData.healthMetrics?.weight}</p>
+        </CardContent>
+      </Card>
+
+      {/* Medical Records (Switchable) */}
+      <Card className="mt-4">
+        <CardContent>
+          <h2 className="text-xl font-semibold mb-2">Medical Records</h2>
+          <div className="flex gap-2 mb-3">
+            <Button onClick={() => setActiveTab("labResults")}>Lab Results</Button>
+            <Button onClick={() => setActiveTab("diagnosis")}>Diagnosis</Button>
+            <Button onClick={() => setActiveTab("treatment")}>Treatment</Button>
+            <Button onClick={() => setActiveTab("medicalHistory")}>Medical History</Button>
           </div>
-        </div>
-      )}
+          {activeTab === "medicalHistory" ? (
+            <ul className="list-disc ml-4">
+              {patientData.medicalHistory.map((event, index) => (
+                <li key={index}>{event.diagnosedOn} - {event.condition}</li>
+              ))}
+            </ul>
+          ) : (
+            <p>{patientData.medicalRecords?.[activeTab]}</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Upcoming Appointments */}
+      <Card className="mt-4">
+        <CardContent>
+          <h2 className="text-xl font-semibold mb-2">Upcoming Appointments</h2>
+          <ul className="list-disc ml-4">
+            {patientData.upcomingAppointments?.map((appointment, index) => (
+              <li key={index}>{appointment.date} - {appointment.doctor}</li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
     </div>
   );
-}
+};
+
+export default UserDashboard;
