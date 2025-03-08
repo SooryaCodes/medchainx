@@ -51,6 +51,23 @@ class PatientController {
     }
   }
 
+  static getPatientByName(req, res) {
+    try {
+      const patientName = req.params.name;
+      const data = JSON.parse(fs.readFileSync("src/data.json"));
+      const patientRecord = data.patients.find((p) => p.name.toLowerCase() === patientName.toLowerCase());
+
+      if (patientRecord) {
+        res.status(200).json({ message: "Patient record retrieved", patientRecord });
+      } else {
+        res.status(404).json({ message: "Patient not found" });
+      }
+    } catch (error) {
+      console.error("Error retrieving patient record:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  }
+
   static getBlockchain(req, res) {
     try {
       res.status(200).json(req.blockchain.chain);

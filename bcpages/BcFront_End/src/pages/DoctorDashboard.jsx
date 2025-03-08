@@ -9,6 +9,7 @@ export default function DoctorDashboard() {
   const [previewFile, setPreviewFile] = useState(null);
   const [doctorNotes, setDoctorNotes] = useState("");
   const [serverFiles, setServerFiles] = useState([]);
+  const [showPreviewModal, setShowPreviewModal] = useState(false); // New state for modal
 
   const fakePatientData = {
     name: "John Doe",
@@ -55,7 +56,7 @@ export default function DoctorDashboard() {
         base64: await fileToBase64(textFile),
         isUploaded: false,
       };
-      setDoctorNotes(""); // Clear input after saving
+      setDoctorNotes("");
     } else if (selectedFile) {
       newFile = {
         id: Date.now(),
@@ -65,7 +66,7 @@ export default function DoctorDashboard() {
         base64: await fileToBase64(selectedFile),
         isUploaded: false,
       };
-      setSelectedFile(null); // Clear file input
+      setSelectedFile(null);
     } else {
       alert("No file or text to upload");
       return;
@@ -104,6 +105,18 @@ export default function DoctorDashboard() {
 
   const deleteFile = (fileId) => {
     setUploadedFiles((prev) => prev.filter((file) => file.id !== fileId));
+  };
+
+  // New function to handle preview click
+  const handlePreviewClick = (file) => {
+    setPreviewFile(file.base64);
+    setShowPreviewModal(true);
+  };
+
+  // New function to close modal
+  const closePreviewModal = () => {
+    setShowPreviewModal(false);
+    setPreviewFile(null);
   };
 
   return (
@@ -178,7 +191,12 @@ export default function DoctorDashboard() {
                 {uploadedFiles.map((file) => (
                   <div key={file.id} className="p-2 border rounded-lg shadow flex justify-between items-center text-sm">
                     <input type="checkbox" checked={selectedFiles.has(file.id)} onChange={() => toggleFileSelection(file.id)} />
-                    <span onClick={() => setPreviewFile(file.base64)} className="cursor-pointer hover:text-blue-600">{file.name}</span>
+                    <span 
+                      onClick={() => handlePreviewClick(file)} 
+                      className="cursor-pointer hover:text-blue-600 flex-1 mx-2"
+                    >
+                      {file.name}
+                    </span>
                     <button onClick={() => deleteFile(file.id)} className="text-red-600">Delete</button>
                   </div>
                 ))}
@@ -195,6 +213,34 @@ export default function DoctorDashboard() {
               )) : <p className="text-gray-500 text-center">No files uploaded yet.</p>}
             </div>
           </div>
+
+          {/* Preview Modal */}
+          {showPreviewModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white p-6 rounded-lg max-w-2xl max-h-[80vh] overflow-auto">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-bold">File Preview</h3>
+                  <button 
+                    onClick={closePreviewModal}
+                    className="text-gray-600 hover:text-gray-800"
+                  >
+                    ×
+                  </button>
+                </div>
+                {previewFile && (
+                  <div>
+                    {previewFile.startsWith('data:image') ? (
+                      <img src={previewFile} alt="Preview" className="max-w-full h-auto" />
+                    ) : previewFile.startsWith('data:text') ? (
+                      <pre className="whitespace-pre-wrap">{atob(previewFile.split(',')[1])}</pre>
+                    ) : (
+                      <p>Preview not available for this file type</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
