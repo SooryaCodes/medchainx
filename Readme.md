@@ -1,3 +1,4 @@
+
 # MedChainX - Cloud-Based EMR System  
 
 ## 🚀 Project Description  
@@ -12,14 +13,26 @@ MedChainX is a modern cloud-based Electronic Medical Records (EMR) system design
    - Ensures **tamper-proof patient data** and **decentralized access** for better interoperability.  
 
 ## 🎯 Link to Project  
-[Live Demo](live_link)  
+[live link of project](live_link)  
+
+## 💡 Features  
+✅ Secure **Patient Record Management**  
+✅ Role-Based **Access Control** (Doctors, Admin, Patients)  
+✅ Real-Time **Data Sync with Cloud Storage**  
+✅ **User-Friendly Dashboard** for Clinics & Hospitals  
+✅ **AI-Driven Health Insights & Risk Prediction**  
+✅ **Smart Appointment & Prescription Management**  
+✅ **Seamless Integration with Existing EMRs**  
+✅ **Automated Insurance Verification & Claims Processing**  
+✅ **Predictive Analytics for Early Disease Detection**  
+✅ **Telemedicine & Remote Consultation Support**  
 
 ## 🛠 Tech Stack  
-- **Frontend:** Next.js, TypeScript, Tailwind CSS  
-- **Backend:** Express.js, Node.js  
-- **Database:** MongoDB Atlas  
-- **Authentication:** JWT  
-- **Hosting:** Vercel (Frontend), Render (Backend)  
+**Frontend:** Next.js, TypeScript, Tailwind CSS  
+**Backend:** Express.js, Node.js  
+**Database:** MongoDB Atlas  
+**Authentication:** JWT  
+**Hosting:** Vercel (Frontend), Render (Backend)  
 
 ## 📦 Prerequisites  
 Ensure you have the following installed:  
@@ -67,17 +80,11 @@ cd ../frontend
 npm run dev  
 ```
 
-## 💡 Features  
-✅ Secure **Patient Record Management**  
-✅ Role-Based **Access Control** (Doctors, Admin, Patients)  
-✅ Real-Time **Data Sync with Cloud Storage**  
-✅ **User-Friendly Dashboard** for Clinics & Hospitals  
-
 ## 👥 Team Members  
-- [Soorya Krishna P R](github_profile)  
-- [Sreemadhav](github_profile)  
-- [Sreeram R](github_profile)  
-- [Jyothis Mariya Joy](github_profile)  
+- [Soorya Krishna P R](https://github.com/SooryaCodes)  
+- [Sreemadhav](https://github.com/ayyomad)  
+- [Sreeram R](https://github.com/Sreeram-R-6)  
+- [Jyothis Mariya Joy](https://github.com/Jyothismariyaa)  
 
-**Developed at BeachHack 6 🚀**  
-```
+**Developed at BeachHack 6 🚀**
+
