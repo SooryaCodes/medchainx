@@ -53,9 +53,7 @@ export const DoctorProvider: React.FC<DoctorProviderProps> = ({ children }) => {
       });
       
       const response = await axiosInstance.get(`/doctor/${cookies.doctorId}`, {
-        headers: {
-          Authorization: `Bearer ${cookies.doctorToken}`
-        }
+       
       });
       console.log('Doctor data response:', response.data);
       

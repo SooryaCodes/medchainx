@@ -29,6 +29,9 @@ export function middleware(request: NextRequest) {
     if (patientToken && patientId) {
       return NextResponse.redirect(new URL('/patient/dashboard', request.url));
     }
+    if (doctorToken && doctorId) {
+      return NextResponse.redirect(new URL('/doctor/dashboard', request.url));
+    }
   }
   
   return NextResponse.next();

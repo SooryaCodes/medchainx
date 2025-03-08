@@ -149,7 +149,7 @@ export default function DoctorDashboard() {
                   <p className="text-gray-500">{doctor.specialty}</p>
                   <div className="flex items-center gap-2 text-sm text-gray-500">
                     <Hospital size={16} />
-                    <span>{doctor.hospitalId}</span>
+                    <span>{typeof doctor.hospitalId === 'object' ? doctor.hospitalId.name || 'Unknown Hospital' : doctor.hospitalId}</span>
                   </div>
                 </div>
               </div>

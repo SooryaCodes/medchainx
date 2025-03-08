@@ -143,7 +143,7 @@ export const getAllDoctors = catchAsync(async (req: Request, res: Response) => {
 // @access  Public
 export const getDoctorById = catchAsync(async (req: Request, res: Response) => {
   try {
-    const doctor = await DoctorModel.findOne({ id: req.params.id })
+    const doctor = await DoctorModel.findOne({ _id: req.params.id })
       .select('-credentials.password')
       .populate('hospitalId', 'name address contact');
     
