@@ -93,13 +93,16 @@ export const registerDoctor = catchAsync(async (
       }
     });
 
+    // Generate a token for the doctor (you'll need to implement this)
+    // For example, using JWT:
+    // const doctorToken = generateToken(doctor.id);
+
     // Send response
     res.status(201).json({
       success: true,
       data: {
-        id: doctor.id,
-        name: doctor.name,
-        specialty: doctor.specialty
+        doctorId: doctor.id,
+        doctorToken: "doctorToken" // Replace with actual token generation
       },
       message: 'Doctor registered successfully'
     });
@@ -160,6 +163,38 @@ export const getDoctorById = catchAsync(async (req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       message: 'Server error while fetching doctor'
+    });
+  }
+});
+
+// @desc    Get doctor data by doctor ID
+// @route   GET /api/doctors/profile/:id
+// @access  Private
+export const getDoctorProfile = catchAsync(async (req: Request, res: Response) => {
+  try {
+    const doctor = await DoctorModel.findOne({ id: req.params.id })
+      .select('-credentials.password')
+      .populate('hospitalId', 'name address contact');
+    
+    if (!doctor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Doctor not found'
+      });
+    }
+    
+    // Here you would typically verify that the requesting user has permission
+    // to access this doctor's data (authentication middleware would handle this)
+    
+    return res.status(200).json({
+      success: true,
+      data: doctor
+    });
+  } catch (error) {
+    console.error('Error fetching doctor profile:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error while fetching doctor profile'
     });
   }
 }); 
