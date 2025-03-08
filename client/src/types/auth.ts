@@ -24,11 +24,35 @@ export interface PatientRegistrationData {
   nationalId: string;
 }
 
+export interface DoctorRegistrationData {
+  username: string;
+  password: string;
+  given_name: string;
+  family_name: string;
+  email: string;
+  phone: string;
+  specialty: string;
+  years_of_experience: string;
+  license_number: string;
+  consultation_fee: string;
+  telemedicine_available: boolean;
+  hospital_id: string;
+  languages_spoken: string[];
+  available_timings: {
+    day: string;
+    startTime: string;
+    endTime: string;
+    enabled: boolean;
+  }[];
+}
+
 export interface RegistrationResponse {
   success: boolean;
   data: {
-    patientId: string;
-    patientToken: string;
+    patientId?: string;
+    patientToken?: string;
+    doctorId?: string;
+    doctorToken?: string;
   };
   message: string;
 } 

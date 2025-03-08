@@ -235,13 +235,32 @@ export default function PatientDashboard() {
       if (patient) {
         console.log(patient, "patient");
         try {
-          const response = await axios.get(`/patiendt/${(patient as any)._id}/health-risks`);
+          const response = await axios.get(`/patient/${(patient as any)._id}/health-risks`);
           console.log(response.data, "response.data health risk");
           
-          if (response.data && Array.isArray(response.data)) {
-            setRiskFactors(response.data);
+          if (response.data && response.data.data) {
+            // Transform the API response to match our UI format
+            const transformedRisks = response.data.data.potentialRisks.map((risk: any) => ({
+              name: risk.riskName,
+              risk: risk.riskLevel.charAt(0).toUpperCase() + risk.riskLevel.slice(1), // Capitalize first letter
+              score: risk.riskLevel === 'high' ? 80 : risk.riskLevel === 'moderate' ? 50 : 30,
+              recommendations: risk.recommendations,
+              description: risk.description,
+              lifestyle: {
+                diet: "Follow recommended dietary guidelines for your condition",
+                exercise: "Regular physical activity as recommended by your healthcare provider",
+                habits: "Maintain healthy lifestyle habits and avoid risk factors",
+                monitoring: "Regular monitoring of relevant health metrics"
+              },
+              metrics: {
+                current: "See your latest health metrics in the Overview tab",
+                target: "Work towards targets set by your healthcare provider"
+              }
+            }));
+            
+            setRiskFactors(transformedRisks);
           } else {
-            // Fallback to enhanced mock data if API doesn't return proper format
+            // Fallback to mock data if API doesn't return proper format
             setRiskFactors([
               { 
                 name: "Cardiovascular Disease", 
@@ -331,7 +350,7 @@ export default function PatientDashboard() {
           }
         } catch (apiError) {
           console.error("API error:", apiError);
-          // Fallback to enhanced mock data on API error
+          // Fallback to mock data on API error
           setRiskFactors([
             { 
               name: "Cardiovascular Disease", 
@@ -1366,6 +1385,23 @@ export default function PatientDashboard() {
                   </div>
                 ) : riskFactors.length > 0 ? (
                   <div className="space-y-6">
+                    {/* Overall Risk Summary Card */}
+                    <div className="bg-gradient-to-r from-amber-50 to-red-50 dark:from-amber-900/30 dark:to-red-900/30 p-6 rounded-lg shadow-sm border border-amber-100 dark:border-amber-800">
+                      <div className="flex items-start gap-4">
+                        <div className="bg-amber-100 dark:bg-amber-900/50 p-3 rounded-full">
+                          <AlertTriangle className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                            Overall Risk Level: <span className="text-red-600 dark:text-red-400 uppercase">High</span>
+                          </h3>
+                          <p className="text-gray-700 dark:text-gray-300">
+                            The patient is a young male diagnosed with Type 2 Diabetes and hypertension. Both conditions are currently not well-controlled, indicating a significant risk for cardiovascular complications and other diabetes-related issues.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
                     {riskFactors.map((factor, index) => (
                       <div key={index} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
                         <div className="flex flex-col mb-4">
@@ -1389,6 +1425,13 @@ export default function PatientDashboard() {
                               style={{ width: `${factor.score}%` }}
                             ></div>
                           </div>
+                          
+                          {/* Description section */}
+                          {factor.description && (
+                            <div className="mt-2 mb-4">
+                              <p className="text-gray-700 dark:text-gray-300">{factor.description}</p>
+                            </div>
+                          )}
                         </div>
                         
                         <div className="mt-4">
@@ -1428,24 +1471,52 @@ export default function PatientDashboard() {
                             </div>
                           </div>
                         )}
-                        
-                        {factor.metrics && (
-                          <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                            <h4 className="font-medium text-gray-900 dark:text-white mb-3">Health Metrics:</h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
-                                <h5 className="text-sm font-medium text-gray-900 dark:text-white mb-1">Current Values</h5>
-                                <p className="text-sm text-gray-600 dark:text-gray-400">{factor.metrics.current}</p>
-                              </div>
-                              <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
-                                <h5 className="text-sm font-medium text-gray-900 dark:text-white mb-1">Target Values</h5>
-                                <p className="text-sm text-green-600 dark:text-green-400">{factor.metrics.target}</p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
                       </div>
                     ))}
+                    
+                    {/* Recommended Screenings Card */}
+                    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
+                      <div className="flex items-center mb-4">
+                        <div className="bg-blue-100 dark:bg-blue-900/50 p-2 rounded-full mr-3">
+                          <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <h3 className="text-xl font-medium text-gray-900 dark:text-white">Recommended Screenings</h3>
+                      </div>
+                      <ul className="space-y-2 pl-1">
+                        {["Annual eye examination for diabetic retinopathy", 
+                          "Regular kidney function tests", 
+                          "Lipid profile screening to assess cardiovascular risk"].map((screening, i) => (
+                          <li key={i} className="flex items-start">
+                            <span className="inline-flex items-center justify-center flex-shrink-0 w-5 h-5 mr-2 mt-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full">
+                              <span className="text-xs">•</span>
+                            </span>
+                            <span className="text-gray-700 dark:text-gray-300">{screening}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    
+                    {/* Lifestyle Recommendations Card */}
+                    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
+                      <div className="flex items-center mb-4">
+                        <div className="bg-green-100 dark:bg-green-900/50 p-2 rounded-full mr-3">
+                          <Wind className="h-5 w-5 text-green-600 dark:text-green-400" />
+                        </div>
+                        <h3 className="text-xl font-medium text-gray-900 dark:text-white">Lifestyle Recommendations</h3>
+                      </div>
+                      <ul className="space-y-2 pl-1">
+                        {["Adopt a balanced diet low in sugar and saturated fats", 
+                          "Engage in regular physical activity (at least 150 minutes of moderate exercise per week)", 
+                          "Implement stress management techniques such as meditation or yoga"].map((lifestyle, i) => (
+                          <li key={i} className="flex items-start">
+                            <span className="inline-flex items-center justify-center flex-shrink-0 w-5 h-5 mr-2 mt-0.5 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-full">
+                              <span className="text-xs">•</span>
+                            </span>
+                            <span className="text-gray-700 dark:text-gray-300">{lifestyle}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center py-8 text-center">
