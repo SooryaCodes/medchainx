@@ -23,13 +23,13 @@ export const getDoctorProfile = async () => {
 };
 
 // Access patient medical records with token
-export const accessPatientRecords = async (accessToken: string) => {
+export const accessPatientRecords = async (accessToken: string, doctorId?: string) => {
   try {
-    const response = await axiosInstance.get(`/patient/records/access`, {
-      headers: {
-        ...getAuthHeader(),
-        'X-Access-Token': accessToken
-      }
+    const response = await axiosInstance.post(`/patient/verify-token`, {
+      token: accessToken,
+      doctorId: doctorId || ''
+    }, {
+      headers: getAuthHeader()
     });
     return response.data;
   } catch (error) {
@@ -53,14 +53,33 @@ export const getPatientRecordById = async (patientId: string, recordId: string, 
 };
 
 // Generate summary of patient medical records
-export const generateRecordsSummary = async (patientId: string, accessToken: string) => {
+export const generateRecordsSummary = async (patientId: string, accessToken: string, doctorId?: string) => {
   try {
     const response = await axiosInstance.post(`/patient/${patientId}/records/summarize`, {}, {
       headers: {
         ...getAuthHeader(),
-        'X-Access-Token': accessToken
+        'X-Access-Token': accessToken,
+        'X-Doctor-ID': doctorId || ''
       }
     });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Add this new function to verify patient tokens
+export const verifyPatientToken = async (token: string, doctorId?: string) => {
+  try {
+    const response = await axiosInstance.post('/patient/verify-token', 
+      { token },
+      {
+        headers: {
+          ...getAuthHeader(),
+          'X-Doctor-ID': doctorId || ''
+        }
+      }
+    );
     return response.data;
   } catch (error) {
     throw error;

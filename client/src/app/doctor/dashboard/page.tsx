@@ -16,7 +16,15 @@ import {
   Languages,
   DollarSign,
   Video,
-  BarChart3
+  BarChart3,
+  Sparkles,
+  X,
+  AlertTriangle,
+  CheckCircle,
+  Pill,
+  Activity,
+  TrendingUp,
+  Focus
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -76,6 +84,85 @@ export default function DoctorDashboard() {
   const [recordSummary, setRecordSummary] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [accessError, setAccessError] = useState<string | null>(null);
+  const [showSecurityWarning, setShowSecurityWarning] = useState(false);
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
+  
+  // Add useEffect to prevent screenshots and inspect
+  useEffect(() => {
+    // Prevent right-click context menu
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      setShowSecurityWarning(true);
+      setTimeout(() => setShowSecurityWarning(false), 3000);
+      return false;
+    };
+
+    // Prevent keyboard shortcuts for screenshots and dev tools
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Prevent PrintScreen
+      if (e.key === 'PrintScreen') {
+        e.preventDefault();
+        setShowSecurityWarning(true);
+        setTimeout(() => setShowSecurityWarning(false), 3000);
+        return false;
+      }
+
+      // Prevent Ctrl+Shift+I (inspect), Ctrl+Shift+C (inspect), Ctrl+Shift+J (console)
+      if ((e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'C' || e.key === 'c' || e.key === 'J' || e.key === 'j')) ||
+          // Prevent F12
+          e.key === 'F12') {
+        e.preventDefault();
+        setShowSecurityWarning(true);
+        setTimeout(() => setShowSecurityWarning(false), 3000);
+        return false;
+      }
+
+      // Prevent Ctrl+P (print)
+      if (e.ctrlKey && (e.key === 'p' || e.key === 'P')) {
+        e.preventDefault();
+        setShowSecurityWarning(true);
+        setTimeout(() => setShowSecurityWarning(false), 3000);
+        return false;
+      }
+    };
+
+    // Add additional protection against screenshots
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        setShowSecurityWarning(true);
+        setTimeout(() => setShowSecurityWarning(false), 3000);
+      }
+    };
+
+    // Modify copy/paste functionality to only disable copy
+    const handleCopy = (e: ClipboardEvent) => {
+      e.preventDefault();
+      setShowSecurityWarning(true);
+      setTimeout(() => setShowSecurityWarning(false), 3000);
+      return false;
+    };
+
+    // Add event listeners
+    document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('copy', handleCopy);
+    document.addEventListener('cut', handleCopy);
+    // Remove paste event listener to allow pasting
+    // document.addEventListener('paste', handleCopy);
+
+    // Clean up event listeners
+    return () => {
+      document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('copy', handleCopy);
+      document.removeEventListener('cut', handleCopy);
+      // Remove paste event listener cleanup as well
+      // document.removeEventListener('paste', handleCopy);
+    };
+  }, []);
   
   // Handle access token submission
   const handleAccessPatientRecords = async () => {
@@ -88,17 +175,60 @@ export default function DoctorDashboard() {
     setAccessError(null);
     
     try {
-      const response = await accessPatientRecords(accessToken);
+      // Include the doctor's ID when accessing patient records
+      const response = await accessPatientRecords(accessToken, (doctor as any)?._id);
       
       if (response.success) {
         setPatientData(response.data.patient);
-        setPatientRecords(response.data.records);
+        
+        // Validate that records exist and are in the expected format
+        if (response.data.records && Array.isArray(response.data.records)) {
+          setPatientRecords(response.data.records);
+        } else {
+          console.warn("No records found or records are not in expected format");
+          setPatientRecords([]);
+        }
+        
         setIsAccessTokenValid(true);
         
-        // Generate summary
-        const summaryResponse = await generateRecordsSummary(response.data.patient.id, accessToken);
-        if (summaryResponse.success) {
-          setRecordSummary(summaryResponse.data.summary);
+        // Format the medical summary if it exists in the response
+        if (response.data.medicalSummary) {
+          // Check if the summary is an object and convert it to a string
+          if (typeof response.data.medicalSummary === 'object') {
+            const summaryObj = response.data.medicalSummary;
+            
+            // Create a formatted string from the summary object
+            let formattedSummary = '';
+            
+            // Add each section of the summary
+            if (summaryObj.patientOverview) {
+              formattedSummary += `**Patient Overview:**\n${summaryObj.patientOverview}\n\n`;
+            }
+            
+            if (summaryObj.keyFindings && Array.isArray(summaryObj.keyFindings)) {
+              formattedSummary += `**Key Findings:**\n${summaryObj.keyFindings.map(finding => `• ${finding}`).join('\n')}\n\n`;
+            }
+            
+            if (summaryObj.medicationSummary) {
+              formattedSummary += `**Medication Summary:**\n${summaryObj.medicationSummary}\n\n`;
+            }
+            
+            if (summaryObj.labResultsTrends) {
+              formattedSummary += `**Lab Results Trends:**\n${summaryObj.labResultsTrends}\n\n`;
+            }
+            
+            if (summaryObj.recentChanges) {
+              formattedSummary += `**Recent Changes:**\n${summaryObj.recentChanges}\n\n`;
+            }
+            
+            if (summaryObj.recommendedFocus) {
+              formattedSummary += `**Recommended Focus:**\n${summaryObj.recommendedFocus}`;
+            }
+            
+            setRecordSummary(formattedSummary);
+          } else {
+            setRecordSummary(response.data.medicalSummary);
+          }
         }
       } else {
         setAccessError(response.message || "Failed to access patient records");
@@ -126,6 +256,58 @@ export default function DoctorDashboard() {
     setSelectedRecord(null);
     setRecordSummary(null);
     setAccessToken("");
+  };
+  
+  const handleGenerateSummary = async () => {
+    if (!patientData?.id || !accessToken) return;
+    
+    setIsSummaryLoading(true);
+    try {
+      const summaryResponse = await generateRecordsSummary(patientData.id, accessToken, (doctor as any)?._id);
+      if (summaryResponse.success) {
+        // Format the summary object into a readable string
+        if (typeof summaryResponse.data.summary === 'object') {
+          const summaryObj = summaryResponse.data.summary;
+          
+          // Create a formatted string from the summary object
+          let formattedSummary = '';
+          
+          // Add each section of the summary
+          if (summaryObj.patientOverview) {
+            formattedSummary += `**Patient Overview:**\n${summaryObj.patientOverview}\n\n`;
+          }
+          
+          if (summaryObj.keyFindings && Array.isArray(summaryObj.keyFindings)) {
+            formattedSummary += `**Key Findings:**\n${summaryObj.keyFindings.map(finding => `• ${finding}`).join('\n')}\n\n`;
+          }
+          
+          if (summaryObj.medicationSummary) {
+            formattedSummary += `**Medication Summary:**\n${summaryObj.medicationSummary}\n\n`;
+          }
+          
+          if (summaryObj.labResultsTrends) {
+            formattedSummary += `**Lab Results Trends:**\n${summaryObj.labResultsTrends}\n\n`;
+          }
+          
+          if (summaryObj.recentChanges) {
+            formattedSummary += `**Recent Changes:**\n${summaryObj.recentChanges}\n\n`;
+          }
+          
+          if (summaryObj.recommendedFocus) {
+            formattedSummary += `**Recommended Focus:**\n${summaryObj.recommendedFocus}`;
+          }
+          
+          setRecordSummary(formattedSummary);
+        } else {
+          setRecordSummary(summaryResponse.data.summary);
+        }
+        setShowSummaryModal(true);
+      }
+    } catch (err) {
+      console.error("Error generating summary:", err);
+    } finally {
+      setIsSummaryLoading(false);
+    }
   };
   
   // Render doctor profile
@@ -390,16 +572,99 @@ export default function DoctorDashboard() {
               
               {/* Medical Records Summary */}
               {recordSummary && (
-                <Card className="border-blue-200 shadow-md rounded-xl">
-                  <CardHeader className="bg-blue-50 border-b border-blue-100 rounded-t-xl">
-                    <CardTitle className="text-blue-800 flex items-center text-lg">
-                      <BarChart3 size={20} className="mr-2" />
-                      AI-Generated Summary
+                <Card className="border-blue-200 shadow-md rounded-xl overflow-hidden">
+                  <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 rounded-t-xl">
+                    <CardTitle className="flex items-center text-lg font-medium">
+                      <Sparkles size={20} className="mr-2" />
+                      AI-Generated Medical Summary
                     </CardTitle>
+                    <CardDescription className="text-blue-100">
+                      Comprehensive overview of patient's medical history
+                    </CardDescription>
                   </CardHeader>
-                  <CardContent className="p-4 bg-white">
-                    <p className="text-gray-700 leading-relaxed">{recordSummary}</p>
+                  <CardContent className="p-0 bg-white">
+                    <div className="prose prose-blue max-w-none">
+                      <div className="divide-y divide-gray-100">
+                        {recordSummary.includes("Patient Overview") && (
+                          <div className="p-4 hover:bg-blue-50 transition-colors">
+                            <h3 className="text-blue-800 flex items-center text-base font-medium mb-2">
+                              <User size={18} className="mr-2 text-blue-600" />
+                              Patient Overview
+                            </h3>
+                            <div className="text-gray-700 leading-relaxed pl-6">
+                              {recordSummary.split("Patient Overview:**\n")[1]?.split("\n\n")[0]}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {recordSummary.includes("Key Findings") && (
+                          <div className="p-4 hover:bg-indigo-50 transition-colors">
+                            <h3 className="text-indigo-800 flex items-center text-base font-medium mb-2">
+                              <AlertTriangle size={18} className="mr-2 text-indigo-600" />
+                              Key Findings
+                            </h3>
+                            <div className="text-gray-700 leading-relaxed pl-6">
+                              {recordSummary.split("Key Findings:**\n")[1]?.split("\n\n")[0]}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {recordSummary.includes("Medication Summary") && (
+                          <div className="p-4 hover:bg-green-50 transition-colors">
+                            <h3 className="text-green-800 flex items-center text-base font-medium mb-2">
+                              <Pill size={18} className="mr-2 text-green-600" />
+                              Medication Summary
+                            </h3>
+                            <div className="text-gray-700 leading-relaxed pl-6">
+                              {recordSummary.split("Medication Summary:**\n")[1]?.split("\n\n")[0]}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {recordSummary.includes("Lab Results Trends") && (
+                          <div className="p-4 hover:bg-amber-50 transition-colors">
+                            <h3 className="text-amber-800 flex items-center text-base font-medium mb-2">
+                              <Activity size={18} className="mr-2 text-amber-600" />
+                              Lab Results Trends
+                            </h3>
+                            <div className="text-gray-700 leading-relaxed pl-6">
+                              {recordSummary.split("Lab Results Trends:**\n")[1]?.split("\n\n")[0]}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {recordSummary.includes("Recent Changes") && (
+                          <div className="p-4 hover:bg-purple-50 transition-colors">
+                            <h3 className="text-purple-800 flex items-center text-base font-medium mb-2">
+                              <TrendingUp size={18} className="mr-2 text-purple-600" />
+                              Recent Changes
+                            </h3>
+                            <div className="text-gray-700 leading-relaxed pl-6">
+                              {recordSummary.split("Recent Changes:**\n")[1]?.split("\n\n")[0]}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {recordSummary.includes("Recommended Focus") && (
+                          <div className="p-4 hover:bg-rose-50 transition-colors">
+                            <h3 className="text-rose-800 flex items-center text-base font-medium mb-2">
+                              <Focus size={18} className="mr-2 text-rose-600" />
+                              Recommended Focus
+                            </h3>
+                            <div className="text-gray-700 leading-relaxed pl-6">
+                              {recordSummary.split("Recommended Focus:**\n")[1]?.split("\n\n")[0] || 
+                               recordSummary.split("Recommended Focus:**\n")[1]}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </CardContent>
+                  <CardFooter className="bg-gray-50 border-t border-gray-100 p-3 flex justify-end">
+                    <Button variant="outline" size="sm" className="text-blue-600 border-blue-200 hover:bg-blue-50">
+                      <FileText size={14} className="mr-1" /> Export Summary
+                    </Button>
+                  </CardFooter>
                 </Card>
               )}
               
@@ -438,68 +703,309 @@ export default function DoctorDashboard() {
     </div>
   );
   
-  // Add the renderMedChainX function similar to the patient dashboard
+  // Update the renderMedChainX function to use tabs for better organization
   const renderMedChainX = () => (
-    <Card className="mb-6 border-none shadow-md overflow-hidden rounded-xl">
-      <CardContent className="p-0">
-        <div className="bg-blue-600 p-6 relative overflow-hidden">
-          <div className="flex items-center justify-between relative z-10">
-            <div>
-              <h2 className="text-2xl font-bold text-white">MedChainX</h2>
-              <p className="text-blue-100">Your secure blockchain-based medical records platform</p>
+    <div className="space-y-6">
+      {!isAccessTokenValid ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Access Patient Records</CardTitle>
+            <CardDescription>
+              Enter the patient's access token to view their medical records
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex space-x-2">
+                <Input
+                  placeholder="Enter patient access token"
+                  value={accessToken}
+                  onChange={(e) => setAccessToken(e.target.value)}
+                  className="flex-1"
+                />
+                <Button onClick={handleAccessPatientRecords} disabled={isLoading}>
+                  {isLoading ? "Verifying..." : "Access"}
+                </Button>
+              </div>
+              {accessError && (
+                <div className="text-red-500 text-sm">{accessError}</div>
+              )}
             </div>
-            <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center text-white">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold">
+              Patient: {patientData?.name ? `${patientData.name.given.join(' ')} ${patientData.name.family}` : `${patientData?.firstName || ''} ${patientData?.lastName || ''}`}
+            </h2>
+            <Button variant="outline" onClick={resetPatientAccess}>
+              <LogOut className="h-4 w-4 mr-2" />
+              End Access
+            </Button>
           </div>
           
-          {/* Decorative elements */}
-          <div className="absolute -right-16 -top-16 h-40 w-40 bg-white/10 rounded-full"></div>
-          <div className="absolute right-20 top-20 h-24 w-24 bg-white/10 rounded-full"></div>
-          <div className="absolute left-1/3 -bottom-10 h-20 w-20 bg-white/10 rounded-full"></div>
-          
-          {/* Animated dots */}
-          <div className="absolute right-12 bottom-4 h-2 w-2 bg-blue-200 rounded-full animate-ping"></div>
-          <div className="absolute left-1/4 bottom-6 h-2 w-2 bg-blue-200 rounded-full animate-pulse delay-300"></div>
-          <div className="absolute right-1/3 top-6 h-2 w-2 bg-blue-200 rounded-full animate-pulse delay-700"></div>
-        </div>
-        
-        <div className="p-4 bg-white">
-          <div className="flex items-center space-x-4">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-500">
-                Secure & Immutable
-              </p>
-              <p className="text-sm text-gray-900 truncate">
-                All medical records are cryptographically secured
-              </p>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-500">
-                Patient-Controlled
-              </p>
-              <p className="text-sm text-gray-900 truncate">
-                Patients control access to their data
-              </p>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-500">
-                Interoperable
-              </p>
-              <p className="text-sm text-gray-900 truncate">
-                Works across healthcare systems
-              </p>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+          <Tabs defaultValue="summary" className="w-full">
+            <TabsList className="grid grid-cols-4 mb-4">
+              <TabsTrigger value="summary">Patient Summary</TabsTrigger>
+              <TabsTrigger value="records">Medical Records</TabsTrigger>
+              <TabsTrigger value="history">Medical History</TabsTrigger>
+              <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="summary">
+              <Card>
+                <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+                  <CardTitle className="flex items-center">
+                    <User size={20} className="mr-2" />
+                    Patient Summary
+                  </CardTitle>
+                  <CardDescription className="text-blue-100">
+                    Overview of patient information and medical summary
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 shadow-sm">
+                        <h3 className="font-medium text-blue-800 flex items-center mb-2">
+                          <Calendar size={16} className="mr-2 text-blue-600" />
+                          Date of Birth
+                        </h3>
+                        <p className="text-gray-700">{patientData?.birthDate ? new Date(patientData.birthDate).toLocaleDateString() : 'Not specified'}</p>
+                      </div>
+                      <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100 shadow-sm">
+                        <h3 className="font-medium text-indigo-800 flex items-center mb-2">
+                          <User size={16} className="mr-2 text-indigo-600" />
+                          Gender
+                        </h3>
+                        <p className="text-gray-700">{patientData?.gender || 'Not specified'}</p>
+                      </div>
+                      <div className="bg-red-50 p-4 rounded-lg border border-red-100 shadow-sm">
+                        <h3 className="font-medium text-red-800 flex items-center mb-2">
+                          <Activity size={16} className="mr-2 text-red-600" />
+                          Blood Type
+                        </h3>
+                        <p className="text-gray-700">{patientData?.bloodType || 'Not specified'}</p>
+                      </div>
+                      <div className="bg-green-50 p-4 rounded-lg border border-green-100 shadow-sm">
+                        <h3 className="font-medium text-green-800 flex items-center mb-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                          </svg>
+                          Contact
+                        </h3>
+                        <p className="text-gray-700">{patientData?.contact?.phone || 'Not specified'}</p>
+                      </div>
+                      <div className="bg-purple-50 p-4 rounded-lg border border-purple-100 shadow-sm">
+                        <h3 className="font-medium text-purple-800 flex items-center mb-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
+                          Email
+                        </h3>
+                        <p className="text-gray-700">{patientData?.contact?.email || 'Not specified'}</p>
+                      </div>
+                    </div>
+                    
+                    {recordSummary && (
+                      <div className="mt-6">
+                        <div className="flex items-center mb-4">
+                          <Sparkles className="h-5 w-5 text-blue-600 mr-2" />
+                          <h3 className="font-medium text-gray-800 text-lg">AI-Generated Summary</h3>
+                        </div>
+                        
+                        <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                          <div className="divide-y divide-gray-100">
+                            {recordSummary.includes("Patient Overview") && (
+                              <div className="p-4 hover:bg-blue-50 transition-colors">
+                                <h3 className="text-blue-800 flex items-center text-base font-medium mb-2">
+                                  <User size={18} className="mr-2 text-blue-600" />
+                                  Patient Overview
+                                </h3>
+                                <div className="text-gray-700 leading-relaxed pl-6">
+                                  {recordSummary.split("Patient Overview:**\n")[1]?.split("\n\n")[0]}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {recordSummary.includes("Key Findings") && (
+                              <div className="p-4 hover:bg-indigo-50 transition-colors">
+                                <h3 className="text-indigo-800 flex items-center text-base font-medium mb-2">
+                                  <AlertTriangle size={18} className="mr-2 text-indigo-600" />
+                                  Key Findings
+                                </h3>
+                                <div className="text-gray-700 leading-relaxed pl-6">
+                                  {recordSummary.split("Key Findings:**\n")[1]?.split("\n\n")[0]}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {recordSummary.includes("Medication Summary") && (
+                              <div className="p-4 hover:bg-green-50 transition-colors">
+                                <h3 className="text-green-800 flex items-center text-base font-medium mb-2">
+                                  <Pill size={18} className="mr-2 text-green-600" />
+                                  Medication Summary
+                                </h3>
+                                <div className="text-gray-700 leading-relaxed pl-6">
+                                  {recordSummary.split("Medication Summary:**\n")[1]?.split("\n\n")[0]}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {recordSummary.includes("Lab Results Trends") && (
+                              <div className="p-4 hover:bg-amber-50 transition-colors">
+                                <h3 className="text-amber-800 flex items-center text-base font-medium mb-2">
+                                  <Activity size={18} className="mr-2 text-amber-600" />
+                                  Lab Results Trends
+                                </h3>
+                                <div className="text-gray-700 leading-relaxed pl-6">
+                                  {recordSummary.split("Lab Results Trends:**\n")[1]?.split("\n\n")[0]}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {recordSummary.includes("Recent Changes") && (
+                              <div className="p-4 hover:bg-purple-50 transition-colors">
+                                <h3 className="text-purple-800 flex items-center text-base font-medium mb-2">
+                                  <TrendingUp size={18} className="mr-2 text-purple-600" />
+                                  Recent Changes
+                                </h3>
+                                <div className="text-gray-700 leading-relaxed pl-6">
+                                  {recordSummary.split("Recent Changes:**\n")[1]?.split("\n\n")[0]}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {recordSummary.includes("Recommended Focus") && (
+                              <div className="p-4 hover:bg-rose-50 transition-colors">
+                                <h3 className="text-rose-800 flex items-center text-base font-medium mb-2">
+                                  <Focus size={18} className="mr-2 text-rose-600" />
+                                  Recommended Focus
+                                </h3>
+                                <div className="text-gray-700 leading-relaxed pl-6">
+                                  {recordSummary.split("Recommended Focus:**\n")[1]?.split("\n\n")[0] || 
+                                   recordSummary.split("Recommended Focus:**\n")[1]}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Add Summarize Report button with AI icon */}
+                    <div className="mt-4 flex justify-end">
+                      <Button 
+                        onClick={handleGenerateSummary}
+                        className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-md"
+                        disabled={isSummaryLoading}
+                      >
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        {isSummaryLoading ? "Generating..." : "Summarize with AI"}
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="records">
+              <div className="space-y-6">
+                {selectedRecord ? (
+                  <MedicalRecordDetail 
+                    record={selectedRecord} 
+                    onClose={handleCloseRecord} 
+                  />
+                ) : (
+                  <MedicalHistoryList 
+                    records={patientRecords} 
+                    onSelectRecord={handleRecordSelect} 
+                  />
+                )}
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="history">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle>Medical History</CardTitle>
+                  <Button 
+                    onClick={() => {
+                      // Open modal to add medical history
+                      // This would be implemented with a state variable and a modal component
+                      alert("Add medical history feature to be implemented");
+                    }}
+                    size="sm"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Add Entry
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {patientRecords.length > 0 ? (
+                      <div className="divide-y">
+                        {patientRecords.map((record, index) => (
+                          <div key={index} className="py-4">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h3 className="font-medium text-gray-800">{record.type}</h3>
+                                <p className="text-sm text-gray-500">{new Date(record.date).toLocaleDateString()}</p>
+                              </div>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => setSelectedRecord(record)}
+                              >
+                                View Details
+                              </Button>
+                            </div>
+                            <p className="text-sm mt-2">{record.description}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        No medical history records available
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="analytics">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Patient Analytics</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-8 text-gray-500">
+                    <BarChart3 className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                    <p>Analytics features coming soon</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </>
+      )}
+    </div>
   );
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Security Warning Alert */}
+      {showSecurityWarning && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <span>Security Alert: This action is not permitted to protect patient data.</span>
+        </div>
+      )}
+
       {/* Header */}
       <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 sm:px-6 max-w-7xl">
@@ -544,7 +1050,7 @@ export default function DoctorDashboard() {
               <CardContent className="p-2 bg-white">
                 <div className="space-y-1">
                   <Button 
-                    variant={activeTab === "profile" ? "subtle" : "ghost"}
+                    variant={activeTab === "profile" ? "secondary" : "ghost"}
                     onClick={() => setActiveTab("profile")}
                     className={`w-full justify-start rounded-lg ${
                       activeTab === "profile" 
@@ -556,7 +1062,7 @@ export default function DoctorDashboard() {
                     <span>Profile</span>
                   </Button>
                   <Button 
-                    variant={activeTab === "consultation" ? "subtle" : "ghost"}
+                    variant={activeTab === "consultation" ? "secondary" : "ghost"}
                     onClick={() => setActiveTab("consultation")}
                     className={`w-full justify-start rounded-lg ${
                       activeTab === "consultation" 

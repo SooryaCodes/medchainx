@@ -116,6 +116,87 @@ export class OpenAIService {
       throw new Error('Failed to generate health risk analysis');
     }
   }
+
+  // Generate a summary of medical records for doctors
+  async generateMedicalRecordsSummary(records: any[], patient: IPatient): Promise<any> {
+    if (!this.apiKey) {
+      throw new Error('OpenAI API key is not configured');
+    }
+
+    try {
+      // Create prompt for OpenAI
+      const prompt = `
+        Summarize the following patient medical records for a doctor's quick review.
+        Focus on key medical findings, trends, and important information that a doctor should know.
+        
+        Patient Information:
+        - Gender: ${patient.gender}
+        - Age: ${this.calculateAge(patient.birthDate)}
+        - Blood Type: ${patient.bloodType || 'Not specified'}
+        
+        Medical Records:
+        ${JSON.stringify(records, null, 2)}
+        
+        Please provide your summary in the following JSON format:
+        {
+          "patientOverview": "Brief overview of the patient's health status",
+          "keyFindings": ["Finding 1", "Finding 2"],
+          "medicationSummary": "Summary of current and past medications",
+          "labResultsTrends": "Summary of lab result trends",
+          "recentChanges": "Summary of recent changes in health status",
+          "recommendedFocus": "Areas the doctor should focus on"
+        }
+      `;
+
+      // Call OpenAI API
+      const response = await axios.post(
+        this.apiUrl,
+        {
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a medical AI assistant that summarizes patient records for doctors. Provide concise, clinically relevant summaries in JSON format only.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          temperature: 0.3,
+          max_tokens: 2000,
+          response_format: { type: 'json_object' }
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.apiKey}`
+          }
+        }
+      );
+
+      // Parse and return the response
+      const result = response.data.choices[0].message.content;
+      return JSON.parse(result);
+    } catch (error) {
+      console.error('Error generating medical records summary:', error);
+      throw new Error('Failed to generate medical records summary');
+    }
+  }
+
+  // Helper method to calculate age from birth date
+  private calculateAge(birthDate: Date | string): number {
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    
+    return age;
+  }
 }
 
 export default new OpenAIService(); 

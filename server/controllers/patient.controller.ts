@@ -348,14 +348,21 @@ export const generatePatientAccessToken = catchAsync(async (req: Request, res: R
 
 // @desc    Verify and decode a patient token
 // @route   POST /api/patients/verify-token
-// @access  Public
+// @access  Private
 export const verifyPatientToken = catchAsync(async (req: Request, res: Response) => {
-  const { token } = req.body;
+  const { token, doctorId } = req.body;
 
   if (!token) {
     return res.status(400).json({
       success: false,
       error: 'Token is required'
+    });
+  }
+
+  if (!doctorId || !mongoose.Types.ObjectId.isValid(doctorId)) {
+    return res.status(400).json({
+      success: false,
+      error: 'Valid doctor ID is required'
     });
   }
 
@@ -370,8 +377,24 @@ export const verifyPatientToken = catchAsync(async (req: Request, res: Response)
       });
     }
 
-    // Check if the patient exists
-    const patient = await PatientModel.findById(decoded.patientId);
+    // Calculate remaining time
+    const now = new Date();
+    const createdAt = new Date(decoded.createdAt);
+    const expirationTime = new Date(createdAt.getTime() + (decoded.expiresIn * 1000));
+    const remainingTime = Math.max(0, Math.floor((expirationTime.getTime() - now.getTime()) / 1000));
+
+    // Check if token is expired
+    if (remainingTime <= 0) {
+      return res.status(401).json({
+        success: false,
+        error: 'Token has expired'
+      });
+    }
+
+    // Get patient data
+    const patient = await PatientModel.findById(decoded.patientId)
+      .select('-username -password') // Exclude sensitive information
+      .lean();
 
     if (!patient) {
       return res.status(404).json({
@@ -380,21 +403,97 @@ export const verifyPatientToken = catchAsync(async (req: Request, res: Response)
       });
     }
 
-    // Calculate remaining time
-    const now = new Date();
-    const createdAt = new Date(decoded.createdAt);
-    const expirationTime = new Date(createdAt.getTime() + (decoded.expiresIn * 1000));
-    const remainingTime = Math.max(0, Math.floor((expirationTime.getTime() - now.getTime()) / 1000));
+    // Get doctor data
+    const doctor = await mongoose.model('Doctor').findById(doctorId)
+      .select('name specialty email') // Select only necessary fields
+      .lean();
 
-    // Return token information
+    if (!doctor) {
+      return res.status(404).json({
+        success: false,
+        error: 'Doctor not found'
+      });
+    }
+
+    // Transform medical reports to match DashboardMedicalRecord format
+    const records = patient.medicalReports.map(report => {
+      // Get doctor information for the report
+      const reportDoctor = {
+        name: report.doctorName,
+        specialty: '', // This might need to be fetched from the doctor collection
+        hospital: '', // This might need to be fetched from the hospital collection
+        contact: ''   // This might need to be fetched from the doctor collection
+      };
+
+      // Transform lab results if available
+      const labResults = report.labReport ? report.labReport.results.map(result => ({
+        name: result.parameter,
+        result: result.value,
+        referenceRange: result.normalRange,
+        date: report.labReport?.testDate?.toISOString() || new Date().toISOString()
+      })) : [];
+
+      // Transform prescriptions if available
+      const prescriptions = report.prescription ? [{
+        name: report.prescription.medication,
+        dosage: report.prescription.dosage,
+        frequency: report.prescription.frequency,
+        duration: `${new Date(report.prescription.startDate).toLocaleDateString()} to ${new Date(report.prescription.endDate).toLocaleDateString()}`
+      }] : [];
+
+      // Transform attachments
+      const attachments = report.attachments ? report.attachments.map(attachment => ({
+        name: attachment.name,
+        type: attachment.fileType,
+        url: attachment.url
+      })) : [];
+
+      return {
+        id: report._id.toString(),
+        date: report.date.toISOString(),
+        type: report.type,
+        description: report.title,
+        doctor: reportDoctor,
+        notes: report.content,
+        prescriptions,
+        labResults,
+        attachments,
+        followUp: '', // This might need to be extracted from the content or added to the schema
+        status: report.status,
+        tags: report.tags || []
+      };
+    });
+
+    // Generate medical records summary using OpenAI
+    let medicalSummary = null;
+    if (records.length > 0) {
+      try {
+        const summaryObject = await openAIService.generateMedicalRecordsSummary(records, patient);
+        
+        // You can either format the summary here on the server side
+        // or pass the object to the client and let it handle the formatting
+        medicalSummary = summaryObject;
+      } catch (summaryError) {
+        console.error('Error generating medical records summary:', summaryError);
+        // Continue execution even if summary generation fails
+      }
+    }
+
+    // Return token information along with patient, doctor data, records, and summary
     res.status(200).json({
       success: true,
       data: {
-        patientId: decoded.patientId,
-        issuedAt: createdAt,
-        expiresIn: decoded.expiresIn,
-        remainingTime: remainingTime,
-        isValid: remainingTime > 0
+        token: {
+          patientId: decoded.patientId,
+          issuedAt: createdAt,
+          expiresIn: decoded.expiresIn,
+          remainingTime: remainingTime,
+          isValid: true
+        },
+        patient,
+        doctor,
+        records,
+        medicalSummary
       },
       message: 'Token verified successfully'
     });

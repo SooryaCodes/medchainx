@@ -542,14 +542,14 @@ export default function PatientDashboard() {
     if (patient && patient.medicalReports && patient.medicalReports.length > 0) {
       const transformedRecords = patient.medicalReports.map((report: any) => {
         return {
-          id: report._id.$oid || report._id || `report-${Math.random().toString(36).substr(2, 9)}`,
-          date: new Date(report.date.$date || report.date).toLocaleDateString('en-US', {
+          id: report._id || `report-${Math.random().toString(36).substr(2, 9)}`,
+          date: new Date(report.date || Date.now()).toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long',
             day: 'numeric'
           }),
           type: report.type || (report.title ? report.title.split(' ')[0] : 'General'),
-          description: report.title,
+          description: report.title || 'Medical Record',
           doctor: {
             name: report.doctor?.name || 'Unknown Doctor',
             specialty: report.doctor?.specialty || 'General Practice',
@@ -558,22 +558,22 @@ export default function PatientDashboard() {
           },
           notes: report.content || report.additionalNotes || '',
           prescriptions: report.prescription?.medications?.map((med: any) => ({
-            name: med.name,
-            dosage: med.dosage,
-            frequency: med.frequency,
+            name: med.name || 'Unknown Medication',
+            dosage: med.dosage || 'As prescribed',
+            frequency: med.frequency || 'As directed',
             duration: med.startDate && med.endDate ? 
-              `${new Date(med.startDate.$date || med.startDate).toLocaleDateString()} - ${new Date(med.endDate.$date || med.endDate).toLocaleDateString()}` : 
+              `${new Date(med.startDate).toLocaleDateString()} - ${new Date(med.endDate).toLocaleDateString()}` : 
               "As prescribed"
           })) || [],
           labResults: report.labReport?.results?.map((result: any) => ({
-            name: result.parameter,
-            result: result.value,
-            referenceRange: result.normalRange,
-            date: report.labReport.testDate ? new Date(report.labReport.testDate.$date || report.labReport.testDate).toLocaleDateString() : 
-              new Date(report.date.$date || report.date).toLocaleDateString(),
-            interpretation: result.interpretation
+            name: result.parameter || 'Test',
+            result: result.value || 'N/A',
+            referenceRange: result.normalRange || 'N/A',
+            date: report.labReport.testDate ? new Date(report.labReport.testDate).toLocaleDateString() : 
+              new Date(report.date || Date.now()).toLocaleDateString(),
+            interpretation: result.interpretation || 'N/A'
           })) || [],
-          attachments: [],  // You can populate this if you have attachments in your data
+          attachments: [],
           followUp: report.additionalNotes || "As recommended",
           status: report.status || 'final',
           tags: report.tags || []
@@ -589,48 +589,50 @@ export default function PatientDashboard() {
   useEffect(() => {
     const checkExistingToken = () => {
       const cookies = document.cookie.split(';');
+      let foundToken = false;
+      let foundExpiry = false;
+      let foundCreation = false;
+      
+      // First check if we already have these values to avoid unnecessary state updates
+      if (generatedToken && tokenExpiry && tokenCreationTime) {
+        return; // Already have all the values, no need to process cookies
+      }
+      
       for (let cookie of cookies) {
         const [name, value] = cookie.trim().split('=');
-        if (name === 'medToken') {
+        if (name === 'medToken' && !generatedToken) {
           // Found existing token
           const tokenValue = decodeURIComponent(value);
           setGeneratedToken(tokenValue);
-          
-          // Try to get expiry from cookie
-          for (let expCookie of cookies) {
-            const [expName, expValue] = expCookie.trim().split('=');
-            if (expName === 'medTokenExpiry') {
-              const expiryTime = new Date(decodeURIComponent(expValue));
-              if (expiryTime > new Date()) {
-                setTokenExpiry(expiryTime);
-                
-                // Try to get creation time
-                for (let createCookie of cookies) {
-                  const [createName, createValue] = createCookie.trim().split('=');
-                  if (createName === 'medTokenCreated') {
-                    setTokenCreationTime(new Date(decodeURIComponent(createValue)));
-                    const duration = expiryTime.getTime() - new Date(decodeURIComponent(createValue)).getTime();
-                    setOriginalDuration(duration);
-                    break;
-                  }
-                }
-                break;
-              }
-            }
+          foundToken = true;
+        } else if (name === 'medTokenExpiry' && !tokenExpiry) {
+          const expiryTime = new Date(decodeURIComponent(value));
+          if (expiryTime > new Date()) {
+            setTokenExpiry(expiryTime);
+            foundExpiry = true;
           }
+        } else if (name === 'medTokenCreated' && !tokenCreationTime) {
+          const creationTime = new Date(decodeURIComponent(value));
+          setTokenCreationTime(creationTime);
+          foundCreation = true;
         }
+      }
+      
+      // Calculate duration if we have both expiry and creation time
+      if (foundExpiry && foundCreation && tokenExpiry && tokenCreationTime) {
+        const duration = tokenExpiry.getTime() - tokenCreationTime.getTime();
+        setOriginalDuration(duration);
       }
     };
     
     checkExistingToken();
     
     // Add this code to fetch patient data
-    console.log('Dashboard mounted, checking if patient data needs to be fetched...');
     if (token && !patient) {
       console.log('Token exists but no patient data, fetching patient data...');
       fetchPatient();
     }
-  }, [token, patient, fetchPatient]);
+  }, [token, patient, fetchPatient, generatedToken, tokenExpiry, tokenCreationTime]);
 
   useEffect(() => {
     if (!tokenExpiry) return;
@@ -1349,7 +1351,9 @@ export default function PatientDashboard() {
               />
             ) : (
               <MedicalHistoryList 
-                records={patientMedicalRecords.length > 0 ? patientMedicalRecords : medicalHistory as DashboardMedicalRecord[]} 
+                records={patientMedicalRecords && patientMedicalRecords.length > 0 ? 
+                  patientMedicalRecords : 
+                  medicalHistory as DashboardMedicalRecord[]} 
                 onSelectRecord={handleRecordSelect} 
               />
             )}
