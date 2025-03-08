@@ -13,10 +13,10 @@ export function AiHealthInsights({ patientName }: AiHealthInsightsProps) {
   
   // Mock AI health summaries
   const aiHealthSummaries = {
-    overall: `Based on your recent health data, you're maintaining good overall health with stable vital signs. Your heart rate, blood pressure, and oxygen levels are within normal ranges. Continue with your current medication regimen and regular exercise, ${patientName}.`,
-    trends: "Your weight has been gradually decreasing, which aligns with your target. Blood pressure has shown slight improvement over the past month. Cholesterol levels have stabilized after starting Atorvastatin.",
-    recommendations: "Consider increasing water intake to improve hydration levels. Your sleep patterns show some irregularity - establishing a consistent sleep schedule may help. Continue monitoring blood sugar levels, especially after meals.",
-    risks: "Your risk assessment indicates moderate cardiovascular risk. Focus on maintaining your exercise routine and low-sodium diet. Your respiratory health is excellent with no concerning patterns detected."
+    overall: `Based on your recent health data, you have a HIGH RISK health profile that requires attention, ${patientName}. Your Type 2 Diabetes (HbA1c: 7.8%) and Hypertension (BP: 135/88 mmHg) are not well-controlled, indicating significant risk for cardiovascular complications.`,
+    trends: "Your HbA1c levels have remained above target range (7.8% vs target <7.0%). Blood pressure readings show consistent elevation above recommended levels. These trends require immediate attention to prevent long-term complications.",
+    recommendations: "Increase frequency of blood glucose monitoring and consider medication adjustments. Implement lifestyle modifications including a low-sugar, low-sodium diet. Engage in at least 150 minutes of moderate exercise weekly and practice stress management techniques.",
+    risks: "Your risk assessment indicates HIGH cardiovascular risk due to poorly controlled diabetes and hypertension. Schedule annual eye examinations, regular kidney function tests, and lipid profile screenings to monitor for complications."
   };
   
   const handleGenerateInsights = () => {

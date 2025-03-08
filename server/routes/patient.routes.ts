@@ -22,4 +22,5 @@ router.post('/verify-token', verifyPatientToken);          // Verify token valid
 router.post('/decode-token', decodePatientAccessToken);    // Decode token without verification
 router.post('/revoke-token', revokePatientToken);          // Revoke a patient token
 
+
 export default router;
