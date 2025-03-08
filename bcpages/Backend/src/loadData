@@ -1,0 +1,14 @@
+ToBlockchain.js
+const fs = require('fs');
+const Blockchain = require('./blockchain');
+
+const blockchain = new Blockchain();
+
+const data = JSON.parse(fs.readFileSync('c:\\hackaathon_2025\\medchainx\\bcpages\\Backend\\src\\data.json', 'utf8'));
+
+data.patients.forEach((patient, index) => {
+  const block = new Block(index + 1, patient.timestamp, patient);
+  blockchain.addBlock(block);
+});
+
+fs.writeFileSync('c:\\hackaathon_2025\\medchainx\\bcpages\\Backend\\src\\blockchainData.json', JSON.stringify(blockchain.getChain(), null, 2));

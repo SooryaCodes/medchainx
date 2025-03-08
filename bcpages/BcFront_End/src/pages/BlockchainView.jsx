@@ -1,32 +1,27 @@
-import React, { useEffect, useState } from "react";
+import { useState, useEffect } from 'react';
 
-const BlockchainView = () => {
-  const [blockchain, setBlockchain] = useState([]);
+function BlockchainView() {
+  const [blockchainData, setBlockchainData] = useState([]);
 
   useEffect(() => {
-    const fetchBlockchain = async () => {
-      try {
-        const response = await fetch("http://localhost:3000/api/patient/get-blockchain");
-        if (!response.ok) throw new Error("Failed to fetch blockchain data");
-        const data = await response.json();
-        setBlockchain(data);
-      } catch (error) {
-        console.error("Error fetching blockchain data:", error);
-      }
-    };
-
-    fetchBlockchain();
+    fetch('http://localhost:3000/blockchain')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(data => setBlockchainData(data))
+      .catch(error => console.error('Error fetching blockchain data:', error));
   }, []);
 
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Blockchain Data</h1>
-      {blockchain.length === 0 ? (
-        <p>Loading blockchain data...</p>
-      ) : (
+      {blockchainData.length > 0 ? (
         <ul className="list-disc ml-4">
-          {blockchain.map((block, index) => (
-            <li key={index} className="mb-4">
+          {blockchainData.map((block, index) => (
+            <li key={index}>
               <p><strong>Index:</strong> {block.index}</p>
               <p><strong>Timestamp:</strong> {block.timestamp}</p>
               <p><strong>Data:</strong> {JSON.stringify(block.data)}</p>
@@ -35,9 +30,11 @@ const BlockchainView = () => {
             </li>
           ))}
         </ul>
+      ) : (
+        <p>No blockchain data available</p>
       )}
     </div>
   );
-};
+}
 
 export default BlockchainView;
