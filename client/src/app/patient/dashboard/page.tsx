@@ -18,7 +18,8 @@ import {
   User,
   BarChart3,
   PieChart,
-  Wind
+  Wind,
+  LogOut
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardCard } from "@/components/ui/dashboard-card";
@@ -30,9 +31,13 @@ import { MedicalRecordDetail } from "@/components/features/medical-history/Medic
 import { HealthMetricsGrid } from "@/components/features/dashboard/HealthMetricsGrid";
 import { HealthCharts } from "@/components/features/dashboard/HealthCharts";
 import { AiHealthInsights } from "@/components/features/dashboard/AiHealthInsights";
+import { usePatient } from "@/context/PatientContext";
+import { useRouter } from "next/navigation";
+import axios from "@/lib/axios";
 
+import { PatientProfile } from "@/components/features/patient/PatientProfile";
 // Define interface for medical record
-interface MedicalRecord {
+interface DashboardMedicalRecord {
   id: string;
   date: string;
   type: string;
@@ -62,6 +67,8 @@ interface MedicalRecord {
     url: string;
   }>;
   followUp: string;
+  status: string;
+  tags: string[];
 }
 
 // Mock data for health metrics
@@ -77,6 +84,7 @@ const healthMetrics = {
   cholesterol: { current: 180, min: 125, max: 200, trend: "stable" }
 };
 
+// Use the existing mock data for now
 const medicalHistory = [
   { 
     id: "rec1",
@@ -100,7 +108,9 @@ const medicalHistory = [
     attachments: [
       { name: "Physical Exam Report", type: "PDF", url: "/reports/physical-exam.pdf" }
     ],
-    followUp: "6 months" 
+    followUp: "6 months",
+    status: "final",
+    tags: ["checkup", "annual"]
   },
   { 
     id: "rec2",
@@ -119,7 +129,9 @@ const medicalHistory = [
     attachments: [
       { name: "Vaccination Record", type: "PDF", url: "/reports/vaccination.pdf" }
     ],
-    followUp: "1 year" 
+    followUp: "1 year",
+    status: "final",
+    tags: ["vaccination", "preventive"]
   },
   { 
     id: "rec3",
@@ -144,58 +156,9 @@ const medicalHistory = [
       { name: "ECG Report", type: "PDF", url: "/reports/ecg.pdf" },
       { name: "Cardiology Notes", type: "PDF", url: "/reports/cardiology-notes.pdf" }
     ],
-    followUp: "3 months" 
-  },
-  { 
-    id: "rec4",
-    date: "2023-05-10", 
-    type: "Emergency", 
-    description: "Acute bronchitis", 
-    doctor: {
-      name: "Dr. Brown",
-      specialty: "Emergency Medicine",
-      hospital: "City Medical Center",
-      contact: "brown@medical.com"
-    }, 
-    notes: "Prescribed antibiotics for 7 days",
-    prescriptions: [
-      { name: "Amoxicillin", dosage: "500mg", frequency: "Three times daily", duration: "7 days" },
-      { name: "Guaifenesin", dosage: "400mg", frequency: "Every 4 hours as needed", duration: "7 days" }
-    ],
-    labResults: [
-      { name: "Chest X-ray", result: "Bronchial inflammation", referenceRange: "Normal", date: "2023-05-10" }
-    ],
-    attachments: [
-      { name: "X-ray Image", type: "DICOM", url: "/reports/xray.dcm" },
-      { name: "Emergency Report", type: "PDF", url: "/reports/emergency.pdf" }
-    ],
-    followUp: "2 weeks" 
-  },
-  { 
-    id: "rec5",
-    date: "2023-02-18", 
-    type: "Surgery", 
-    description: "Appendectomy", 
-    doctor: {
-      name: "Dr. Davis",
-      specialty: "Surgery",
-      hospital: "City Medical Center",
-      contact: "davis@medical.com"
-    }, 
-    notes: "Successful procedure, follow-up in 2 weeks",
-    prescriptions: [
-      { name: "Hydrocodone/Acetaminophen", dosage: "5/325mg", frequency: "Every 6 hours as needed", duration: "5 days" },
-      { name: "Docusate Sodium", dosage: "100mg", frequency: "Twice daily", duration: "7 days" }
-    ],
-    labResults: [
-      { name: "Pre-op Blood Work", result: "Normal", referenceRange: "Standard", date: "2023-02-17" },
-      { name: "Pathology Report", result: "Acute appendicitis", referenceRange: "N/A", date: "2023-02-20" }
-    ],
-    attachments: [
-      { name: "Surgical Report", type: "PDF", url: "/reports/surgery.pdf" },
-      { name: "Discharge Instructions", type: "PDF", url: "/reports/discharge.pdf" }
-    ],
-    followUp: "2 weeks" 
+    followUp: "6 months",
+    status: "final",
+    tags: ["cardiology", "heart"]
   }
 ];
 
@@ -241,126 +204,436 @@ const mockChartData = {
 };
 
 export default function PatientDashboard() {
+  const { patient, loading, error, logout, token, fetchPatient, remainingTime, setRemainingTime } = usePatient();
+  const router = useRouter();
+  
   const [activeTab, setActiveTab] = useState("overview");
-  const [selectedMedicalRecord, setSelectedMedicalRecord] = useState<MedicalRecord | null>(null);
+  const [selectedMedicalRecord, setSelectedMedicalRecord] = useState<DashboardMedicalRecord | null>(null);
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [isGeneratingToken, setIsGeneratingToken] = useState(false);
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
   const [tokenExpiry, setTokenExpiry] = useState<Date | null>(null);
-  const [remainingTime, setRemainingTime] = useState<string>("");
   const [tokenCreationTime, setTokenCreationTime] = useState<Date | null>(null);
   const [originalDuration, setOriginalDuration] = useState<number>(60 * 60 * 1000); // Default 1h
+  const [formattedTime, setFormattedTime] = useState<string | null>(null);
+  const [showProfile, setShowProfile] = useState(false);
+  const [patientMedicalRecords, setPatientMedicalRecords] = useState<DashboardMedicalRecord[]>([]);
+  const [riskFactors, setRiskFactors] = useState<any[]>([]);  // Initialize as empty array
+  const [isLoadingRisks, setIsLoadingRisks] = useState(false);
+  const [riskError, setRiskError] = useState<string | null>(null);
 
-  const handleRecordSelect = (record: MedicalRecord) => {
-    setSelectedMedicalRecord(record);
+  const fetchHealthRisks = async () => {
+    console.log("fetchHealthRisks called");
+    
+    setIsLoadingRisks(true);
+    setRiskError(null);
+    
+    try {
+      // Add artificial delay to show loading state
+      await new Promise(resolve => setTimeout(resolve, 2500)); // 2.5 second delay
+      
+      if (patient) {
+        console.log(patient, "patient");
+        try {
+          // Use the token in the request headers
+          const headers = generatedToken ? { Authorization: `Bearer ${generatedToken}` } : {};
+          const response = await axios.get(`/patient/${(patient as any)._id}/health-risks`, { headers });
+          console.log(response.data, "response.data health risk");
+          
+          if (response.data && response.data.data) {
+            // Transform the API response to match our UI format
+            const transformedRisks = response.data.data.potentialRisks.map((risk: any) => ({
+              name: risk.riskName,
+              risk: risk.riskLevel.charAt(0).toUpperCase() + risk.riskLevel.slice(1), // Capitalize first letter
+              score: risk.riskLevel === 'high' ? 80 : risk.riskLevel === 'moderate' ? 50 : 30,
+              recommendations: risk.recommendations,
+              description: risk.description,
+              lifestyle: {
+                diet: "Follow recommended dietary guidelines for your condition",
+                exercise: "Regular physical activity as recommended by your healthcare provider",
+                habits: "Maintain healthy lifestyle habits and avoid risk factors",
+                monitoring: "Regular monitoring of relevant health metrics"
+              },
+              metrics: {
+                current: "See your latest health metrics in the Overview tab",
+                target: "Work towards targets set by your healthcare provider"
+              }
+            }));
+            
+            setRiskFactors(transformedRisks);
+          } else {
+            // Fallback to mock data if API doesn't return proper format
+            setRiskFactors([
+              { 
+                name: "Cardiovascular Disease", 
+                risk: "Moderate", 
+                score: 65, 
+                recommendations: [
+                  "30 minutes of cardio exercise 5 days a week",
+                  "Mediterranean diet with reduced sodium intake",
+                  "Daily stress management through meditation",
+                  "Regular blood pressure monitoring at home"
+                ],
+                lifestyle: {
+                  diet: "Reduce saturated fats, increase omega-3 fatty acids, limit sodium to <2,300mg daily",
+                  exercise: "150 minutes of moderate-intensity aerobic activity weekly",
+                  habits: "Avoid smoking, limit alcohol to 1 drink daily",
+                  monitoring: "Check blood pressure weekly, schedule quarterly lipid panels"
+                },
+                metrics: {
+                  current: "BP: 135/85, Cholesterol: 210mg/dL, Triglycerides: 165mg/dL",
+                  target: "BP: <120/80, Cholesterol: <200mg/dL, Triglycerides: <150mg/dL"
+                }
+              },
+              { 
+                name: "Type 2 Diabetes", 
+                risk: "Low", 
+                score: 30, 
+                recommendations: [
+                  "Regular A1C testing every 6 months",
+                  "Balanced diet with controlled carbohydrate intake",
+                  "Daily foot examination for early detection of complications",
+                  "Stay hydrated with 8-10 glasses of water daily"
+                ],
+                lifestyle: {
+                  diet: "Low glycemic index foods, portion control, limit added sugars to <25g daily",
+                  exercise: "Combine aerobic exercise with resistance training 3-4 times weekly",
+                  habits: "Regular sleep schedule (7-8 hours), stress management",
+                  monitoring: "Check blood glucose levels as recommended by your physician"
+                },
+                metrics: {
+                  current: "Fasting glucose: 95mg/dL, A1C: 5.6%",
+                  target: "Fasting glucose: 70-99mg/dL, A1C: <5.7%"
+                }
+              },
+              { 
+                name: "Hypertension", 
+                risk: "High", 
+                score: 80, 
+                recommendations: [
+                  "DASH diet (Dietary Approaches to Stop Hypertension)",
+                  "Daily blood pressure monitoring and logging",
+                  "Reduce caffeine and alcohol consumption",
+                  "Progressive muscle relaxation techniques for stress"
+                ],
+                lifestyle: {
+                  diet: "DASH diet with potassium-rich foods, limit sodium to <1,500mg daily",
+                  exercise: "Regular aerobic activity with moderate intensity, avoid high-intensity exercises",
+                  habits: "Maintain healthy weight, practice deep breathing exercises daily",
+                  monitoring: "Monitor BP at the same time daily, keep detailed log for physician review"
+                },
+                metrics: {
+                  current: "Systolic: 145mmHg, Diastolic: 92mmHg, Resting HR: 78bpm",
+                  target: "Systolic: <120mmHg, Diastolic: <80mmHg, Resting HR: 60-70bpm"
+                }
+              },
+              { 
+                name: "Osteoporosis", 
+                risk: "Moderate", 
+                score: 55, 
+                recommendations: [
+                  "Weight-bearing exercises 3 times weekly",
+                  "Calcium and vitamin D supplementation",
+                  "Bone density scan annually",
+                  "Fall prevention strategies at home"
+                ],
+                lifestyle: {
+                  diet: "1,200mg calcium daily, 800-1000 IU vitamin D, adequate protein intake",
+                  exercise: "Weight-bearing and resistance exercises, balance training",
+                  habits: "Limit alcohol and caffeine, quit smoking",
+                  monitoring: "DEXA scan as recommended, height measurement annually"
+                },
+                metrics: {
+                  current: "T-score: -1.8, Calcium: 9.2mg/dL, Vitamin D: 28ng/mL",
+                  target: "T-score: >-1.0, Calcium: 8.5-10.5mg/dL, Vitamin D: 30-50ng/mL"
+                }
+              }
+            ]);
+          }
+        } catch (apiError) {
+          console.error("API error:", apiError);
+          // Fallback to mock data on API error
+          setRiskFactors([
+            { 
+              name: "Cardiovascular Disease", 
+              risk: "Moderate", 
+              score: 65, 
+              recommendations: [
+                "30 minutes of cardio exercise 5 days a week",
+                "Mediterranean diet with reduced sodium intake",
+                "Daily stress management through meditation",
+                "Regular blood pressure monitoring at home"
+              ],
+              lifestyle: {
+                diet: "Reduce saturated fats, increase omega-3 fatty acids, limit sodium to <2,300mg daily",
+                exercise: "150 minutes of moderate-intensity aerobic activity weekly",
+                habits: "Avoid smoking, limit alcohol to 1 drink daily",
+                monitoring: "Check blood pressure weekly, schedule quarterly lipid panels"
+              },
+              metrics: {
+                current: "BP: 135/85, Cholesterol: 210mg/dL, Triglycerides: 165mg/dL",
+                target: "BP: <120/80, Cholesterol: <200mg/dL, Triglycerides: <150mg/dL"
+              }
+            },
+            { 
+              name: "Type 2 Diabetes", 
+              risk: "Low", 
+              score: 30, 
+              recommendations: [
+                "Regular A1C testing every 6 months",
+                "Balanced diet with controlled carbohydrate intake",
+                "Daily foot examination for early detection of complications",
+                "Stay hydrated with 8-10 glasses of water daily"
+              ],
+              lifestyle: {
+                diet: "Low glycemic index foods, portion control, limit added sugars to <25g daily",
+                exercise: "Combine aerobic exercise with resistance training 3-4 times weekly",
+                habits: "Regular sleep schedule (7-8 hours), stress management",
+                monitoring: "Check blood glucose levels as recommended by your physician"
+              },
+              metrics: {
+                current: "Fasting glucose: 95mg/dL, A1C: 5.6%",
+                target: "Fasting glucose: 70-99mg/dL, A1C: <5.7%"
+              }
+            },
+            { 
+              name: "Hypertension", 
+              risk: "High", 
+              score: 80, 
+              recommendations: [
+                "DASH diet (Dietary Approaches to Stop Hypertension)",
+                "Daily blood pressure monitoring and logging",
+                "Reduce caffeine and alcohol consumption",
+                "Progressive muscle relaxation techniques for stress"
+              ],
+              lifestyle: {
+                diet: "DASH diet with potassium-rich foods, limit sodium to <1,500mg daily",
+                exercise: "Regular aerobic activity with moderate intensity, avoid high-intensity exercises",
+                habits: "Maintain healthy weight, practice deep breathing exercises daily",
+                monitoring: "Monitor BP at the same time daily, keep detailed log for physician review"
+              },
+              metrics: {
+                current: "Systolic: 145mmHg, Diastolic: 92mmHg, Resting HR: 78bpm",
+                target: "Systolic: <120mmHg, Diastolic: <80mmHg, Resting HR: 60-70bpm"
+              }
+            },
+            { 
+              name: "Osteoporosis", 
+              risk: "Moderate", 
+              score: 55, 
+              recommendations: [
+                "Weight-bearing exercises 3 times weekly",
+                "Calcium and vitamin D supplementation",
+                "Bone density scan annually",
+                "Fall prevention strategies at home"
+              ],
+              lifestyle: {
+                diet: "1,200mg calcium daily, 800-1000 IU vitamin D, adequate protein intake",
+                exercise: "Weight-bearing and resistance exercises, balance training",
+                habits: "Limit alcohol and caffeine, quit smoking",
+                monitoring: "DEXA scan as recommended, height measurement annually"
+              },
+              metrics: {
+                current: "T-score: -1.8, Calcium: 9.2mg/dL, Vitamin D: 28ng/mL",
+                target: "T-score: >-1.0, Calcium: 8.5-10.5mg/dL, Vitamin D: 30-50ng/mL"
+              }
+            }
+          ]);
+        }
+      } else {
+        // If no patient ID, use enhanced mock data
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
+        setRiskFactors([
+          { 
+            name: "Cardiovascular Disease", 
+            risk: "Moderate", 
+            score: 65, 
+            recommendations: [
+              "30 minutes of cardio exercise 5 days a week",
+              "Mediterranean diet with reduced sodium intake",
+              "Daily stress management through meditation",
+              "Regular blood pressure monitoring at home"
+            ],
+            lifestyle: {
+              diet: "Reduce saturated fats, increase omega-3 fatty acids, limit sodium to <2,300mg daily",
+              exercise: "150 minutes of moderate-intensity aerobic activity weekly",
+              habits: "Avoid smoking, limit alcohol to 1 drink daily",
+              monitoring: "Check blood pressure weekly, schedule quarterly lipid panels"
+            },
+            metrics: {
+              current: "BP: 135/85, Cholesterol: 210mg/dL, Triglycerides: 165mg/dL",
+              target: "BP: <120/80, Cholesterol: <200mg/dL, Triglycerides: <150mg/dL"
+            }
+          },
+          { 
+            name: "Type 2 Diabetes", 
+            risk: "Low", 
+            score: 30, 
+            recommendations: [
+              "Regular A1C testing every 6 months",
+              "Balanced diet with controlled carbohydrate intake",
+              "Daily foot examination for early detection of complications",
+              "Stay hydrated with 8-10 glasses of water daily"
+            ],
+            lifestyle: {
+              diet: "Low glycemic index foods, portion control, limit added sugars to <25g daily",
+              exercise: "Combine aerobic exercise with resistance training 3-4 times weekly",
+              habits: "Regular sleep schedule (7-8 hours), stress management",
+              monitoring: "Check blood glucose levels as recommended by your physician"
+            },
+            metrics: {
+              current: "Fasting glucose: 95mg/dL, A1C: 5.6%",
+              target: "Fasting glucose: 70-99mg/dL, A1C: <5.7%"
+            }
+          },
+          { 
+            name: "Hypertension", 
+            risk: "High", 
+            score: 80, 
+            recommendations: [
+              "DASH diet (Dietary Approaches to Stop Hypertension)",
+              "Daily blood pressure monitoring and logging",
+              "Reduce caffeine and alcohol consumption",
+              "Progressive muscle relaxation techniques for stress"
+            ],
+            lifestyle: {
+              diet: "DASH diet with potassium-rich foods, limit sodium to <1,500mg daily",
+              exercise: "Regular aerobic activity with moderate intensity, avoid high-intensity exercises",
+              habits: "Maintain healthy weight, practice deep breathing exercises daily",
+              monitoring: "Monitor BP at the same time daily, keep detailed log for physician review"
+            },
+            metrics: {
+              current: "Systolic: 145mmHg, Diastolic: 92mmHg, Resting HR: 78bpm",
+              target: "Systolic: <120mmHg, Diastolic: <80mmHg, Resting HR: 60-70bpm"
+            }
+          },
+          { 
+            name: "Osteoporosis", 
+            risk: "Moderate", 
+            score: 55, 
+            recommendations: [
+              "Weight-bearing exercises 3 times weekly",
+              "Calcium and vitamin D supplementation",
+              "Bone density scan annually",
+              "Fall prevention strategies at home"
+            ],
+            lifestyle: {
+              diet: "1,200mg calcium daily, 800-1000 IU vitamin D, adequate protein intake",
+              exercise: "Weight-bearing and resistance exercises, balance training",
+              habits: "Limit alcohol and caffeine, quit smoking",
+              monitoring: "DEXA scan as recommended, height measurement annually"
+            },
+            metrics: {
+              current: "T-score: -1.8, Calcium: 9.2mg/dL, Vitamin D: 28ng/mL",
+              target: "T-score: >-1.0, Calcium: 8.5-10.5mg/dL, Vitamin D: 30-50ng/mL"
+            }
+          }
+        ]);
+      }
+    } catch (error) {
+      console.error("Error in health risk analysis:", error);
+      setRiskError("Failed to load health risk data. Please try again later.");
+    } finally {
+      setIsLoadingRisks(false);
+    }
   };
 
-  const handleCloseRecord = () => {
-    setSelectedMedicalRecord(null);
-  };
+  useEffect(() => {
+    if (patient && patient.medicalReports && patient.medicalReports.length > 0) {
+      const transformedRecords = patient.medicalReports.map((report: any) => {
+        return {
+          id: report._id || `report-${Math.random().toString(36).substr(2, 9)}`,
+          date: new Date(report.date || Date.now()).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          }),
+          type: report.type || (report.title ? report.title.split(' ')[0] : 'General'),
+          description: report.title || 'Medical Record',
+          doctor: {
+            name: report.doctor?.name || 'Unknown Doctor',
+            specialty: report.doctor?.specialty || 'General Practice',
+            hospital: report.doctor?.hospital?.name || 'Unknown Hospital',
+            contact: report.doctor?.hospital?.address || 'No contact information'
+          },
+          notes: report.content || report.additionalNotes || '',
+          prescriptions: report.prescription?.medications?.map((med: any) => ({
+            name: med.name || 'Unknown Medication',
+            dosage: med.dosage || 'As prescribed',
+            frequency: med.frequency || 'As directed',
+            duration: med.startDate && med.endDate ? 
+              `${new Date(med.startDate).toLocaleDateString()} - ${new Date(med.endDate).toLocaleDateString()}` : 
+              "As prescribed"
+          })) || [],
+          labResults: report.labReport?.results?.map((result: any) => ({
+            name: result.parameter || 'Test',
+            result: result.value || 'N/A',
+            referenceRange: result.normalRange || 'N/A',
+            date: report.labReport.testDate ? new Date(report.labReport.testDate).toLocaleDateString() : 
+              new Date(report.date || Date.now()).toLocaleDateString(),
+            interpretation: result.interpretation || 'N/A'
+          })) || [],
+          attachments: [],
+          followUp: report.additionalNotes || "As recommended",
+          status: report.status || 'final',
+          tags: report.tags || []
+        };
+      });
+      setPatientMedicalRecords(transformedRecords);
+    } else {
+      // Use mock data if no patient data is available
+      setPatientMedicalRecords(medicalHistory as DashboardMedicalRecord[]);
+    }
+  }, [patient]);
 
-  // Check for existing token in cookies on component mount
   useEffect(() => {
     const checkExistingToken = () => {
       const cookies = document.cookie.split(';');
+      let foundToken = false;
+      let foundExpiry = false;
+      let foundCreation = false;
+      
+      // First check if we already have these values to avoid unnecessary state updates
+      if (generatedToken && tokenExpiry && tokenCreationTime) {
+        return; // Already have all the values, no need to process cookies
+      }
+      
       for (let cookie of cookies) {
         const [name, value] = cookie.trim().split('=');
-        if (name === 'medToken') {
+        if (name === 'medToken' && !generatedToken) {
           // Found existing token
           const tokenValue = decodeURIComponent(value);
           setGeneratedToken(tokenValue);
-          
-          // Try to get expiry from cookie
-          for (let expCookie of cookies) {
-            const [expName, expValue] = expCookie.trim().split('=');
-            if (expName === 'medTokenExpiry') {
-              const expiryTime = new Date(decodeURIComponent(expValue));
-              if (expiryTime > new Date()) {
-                setTokenExpiry(expiryTime);
-                
-                // Try to get creation time
-                for (let createCookie of cookies) {
-                  const [createName, createValue] = createCookie.trim().split('=');
-                  if (createName === 'medTokenCreated') {
-                    setTokenCreationTime(new Date(decodeURIComponent(createValue)));
-                    const duration = expiryTime.getTime() - new Date(decodeURIComponent(createValue)).getTime();
-                    setOriginalDuration(duration);
-                    break;
-                  }
-                }
-                break;
-              }
-            }
+          foundToken = true;
+        } else if (name === 'medTokenExpiry' && !tokenExpiry) {
+          const expiryTime = new Date(decodeURIComponent(value));
+          if (expiryTime > new Date()) {
+            setTokenExpiry(expiryTime);
+            foundExpiry = true;
           }
+        } else if (name === 'medTokenCreated' && !tokenCreationTime) {
+          const creationTime = new Date(decodeURIComponent(value));
+          setTokenCreationTime(creationTime);
+          foundCreation = true;
         }
+      }
+      
+      // Calculate duration if we have both expiry and creation time
+      if (foundExpiry && foundCreation && tokenExpiry && tokenCreationTime) {
+        const duration = tokenExpiry.getTime() - tokenCreationTime.getTime();
+        setOriginalDuration(duration);
       }
     };
     
     checkExistingToken();
-  }, []);
+    
+    // Add this code to fetch patient data
+    if (token && !patient) {
+      console.log('Token exists but no patient data, fetching patient data...');
+      fetchPatient();
+    }
+  }, [token, patient, fetchPatient, generatedToken, tokenExpiry, tokenCreationTime]);
 
-  const handleGenerateToken = () => {
-    setIsGeneratingToken(true);
-    // Simulate token generation
-    setTimeout(() => {
-      setIsGeneratingToken(false);
-      const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXRpZW50SWQiOiIxMjM0NTYiLCJleHBpcnkiOiIyMDI0LTA1LTMwVDIzOjU5OjU5WiJ9";
-      setGeneratedToken(token);
-      
-      // Set token expiry based on selected duration
-      const expirySelect = document.getElementById("token-validity") as HTMLSelectElement;
-      const expiryValue = expirySelect?.value || "1h";
-      const expiryTime = new Date();
-      let durationMs = 60 * 60 * 1000; // Default 1h
-      
-      switch(expiryValue) {
-        case "30m": 
-          durationMs = 30 * 60 * 1000;
-          expiryTime.setMinutes(expiryTime.getMinutes() + 30); 
-          break;
-        case "45m": 
-          durationMs = 45 * 60 * 1000;
-          expiryTime.setMinutes(expiryTime.getMinutes() + 45); 
-          break;
-        case "1h": 
-          durationMs = 60 * 60 * 1000;
-          expiryTime.setHours(expiryTime.getHours() + 1); 
-          break;
-        case "2h": 
-          durationMs = 2 * 60 * 60 * 1000;
-          expiryTime.setHours(expiryTime.getHours() + 2); 
-          break;
-        case "4h": 
-          durationMs = 4 * 60 * 60 * 1000;
-          expiryTime.setHours(expiryTime.getHours() + 4); 
-          break;
-        case "8h": 
-          durationMs = 8 * 60 * 60 * 1000;
-          expiryTime.setHours(expiryTime.getHours() + 8); 
-          break;
-        case "24h": 
-          durationMs = 24 * 60 * 60 * 1000;
-          expiryTime.setHours(expiryTime.getHours() + 24); 
-          break;
-        default: 
-          durationMs = 60 * 60 * 1000;
-          expiryTime.setHours(expiryTime.getHours() + 1);
-      }
-      
-      setTokenExpiry(expiryTime);
-      setOriginalDuration(durationMs);
-      
-      const creationTime = new Date();
-      setTokenCreationTime(creationTime);
-      
-      // Set cookies with token, expiry and creation time
-      document.cookie = `medToken=${token}; expires=${expiryTime.toUTCString()}; path=/; secure; samesite=strict`;
-      document.cookie = `medTokenExpiry=${expiryTime.toUTCString()}; expires=${expiryTime.toUTCString()}; path=/; secure; samesite=strict`;
-      document.cookie = `medTokenCreated=${creationTime.toUTCString()}; expires=${expiryTime.toUTCString()}; path=/; secure; samesite=strict`;
-    }, 1500);
-  };
-
-  // Update remaining time
   useEffect(() => {
     if (!tokenExpiry) return;
     
@@ -372,7 +645,7 @@ export default function PatientDashboard() {
         setGeneratedToken(null);
         setTokenExpiry(null);
         setTokenCreationTime(null);
-        setRemainingTime("");
+        setRemainingTime(null);
         // Clear cookies
         document.cookie = "medToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
         document.cookie = "medTokenExpiry=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
@@ -380,13 +653,13 @@ export default function PatientDashboard() {
         return;
       }
       
-      const hours = Math.floor(diff / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-      
-      setRemainingTime(
-        `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
-      );
+      // Format the time as a string before setting it
+      const totalSeconds = diff / 1000;
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = Math.floor(totalSeconds % 60);
+      setRemainingTime(totalSeconds.toString());
+      setFormattedTime(`${hours}:${minutes}:${seconds}`);
     };
     
     updateRemainingTime();
@@ -395,6 +668,111 @@ export default function PatientDashboard() {
     return () => clearInterval(interval);
   }, [tokenExpiry]);
 
+  useEffect(() => {
+    // Remove this effect that automatically fetches risks when tab changes
+    // We'll only fetch when the user clicks the button now
+  }, [activeTab, patient]);
+
+  const handleRecordSelect = (record: DashboardMedicalRecord) => {
+    setSelectedMedicalRecord(record);
+  };
+
+  const handleCloseRecord = () => {
+    setSelectedMedicalRecord(null);
+  };
+
+  const handleGenerateToken = async () => {
+    setIsGeneratingToken(true);
+    
+    try {
+      // Get selected duration from dropdown
+      const expirySelect = document.getElementById("token-validity") as HTMLSelectElement;
+      const expiryValue = expirySelect?.value || "1h";
+      
+      // Convert duration string to seconds
+      let expiresIn = 3600; // Default 1h in seconds
+      switch(expiryValue) {
+        case "30m": expiresIn = 30 * 60; break;
+        case "45m": expiresIn = 45 * 60; break;
+        case "1h": expiresIn = 60 * 60; break;
+        case "2h": expiresIn = 2 * 60 * 60; break;
+        case "4h": expiresIn = 4 * 60 * 60; break;
+        case "8h": expiresIn = 8 * 60 * 60; break;
+        case "24h": expiresIn = 24 * 60 * 60; break;
+      }
+      
+      // Get selected data to share
+      const shareVitals = (document.getElementById("share-vitals") as HTMLInputElement)?.checked || false;
+      const shareMedications = (document.getElementById("share-medications") as HTMLInputElement)?.checked || false;
+      const shareHistory = (document.getElementById("share-history") as HTMLInputElement)?.checked || false;
+      const shareLab = (document.getElementById("share-lab") as HTMLInputElement)?.checked || false;
+      const shareRisk = (document.getElementById("share-risk") as HTMLInputElement)?.checked || false;
+      
+      // Get specific conditions
+      const shareCardiac = (document.getElementById("share-cardiac") as HTMLInputElement)?.checked || false;
+      const shareDiabetes = (document.getElementById("share-diabetes") as HTMLInputElement)?.checked || false;
+      const shareRespiratory = (document.getElementById("share-respiratory") as HTMLInputElement)?.checked || false;
+      const shareAllergies = (document.getElementById("share-allergies") as HTMLInputElement)?.checked || false;
+      
+      // Prepare scopes array based on selected options
+      const scopes = [];
+      if (shareVitals) scopes.push("vitals");
+      if (shareMedications) scopes.push("medications");
+      if (shareHistory) scopes.push("history");
+      if (shareLab) scopes.push("lab_results");
+      if (shareRisk) scopes.push("risk_assessments");
+      
+      // Add specific conditions if selected
+      if (shareCardiac) scopes.push("condition:cardiac");
+      if (shareDiabetes) scopes.push("condition:diabetes");
+      if (shareRespiratory) scopes.push("condition:respiratory");
+      if (shareAllergies) scopes.push("condition:allergies");
+      
+      // Call the API to generate token with correct parameters
+      const response = await axios.post('/patient/generate-token', {
+        patientId: (patient as any)._id,
+        expiresIn: expiresIn,
+        scopes: scopes.length > 0 ? scopes : ["basic_info"], // Default to basic_info if nothing selected
+        purpose: "Share medical data with healthcare provider"
+      });
+      
+      if (response.data && response.data.success) {
+        const tokenData = response.data.data;
+        setGeneratedToken(tokenData.token);
+        
+        // Calculate expiry time based on API response
+        const expiryTime = new Date(new Date(tokenData.issuedAt).getTime() + tokenData.expiresIn * 1000);
+        setTokenExpiry(expiryTime);
+        
+        // Set creation time
+        const creationTime = new Date(tokenData.issuedAt);
+        setTokenCreationTime(creationTime);
+        
+        // Set original duration in milliseconds
+        setOriginalDuration(tokenData.expiresIn * 1000);
+        
+        // Store token scopes
+        const tokenScopes = tokenData.scopes || scopes;
+        
+        // Set cookies with token, expiry, creation time and scopes
+        document.cookie = `medToken=${tokenData.token}; expires=${expiryTime.toUTCString()}; path=/; secure; samesite=strict`;
+        document.cookie = `medTokenExpiry=${expiryTime.toUTCString()}; expires=${expiryTime.toUTCString()}; path=/; secure; samesite=strict`;
+        document.cookie = `medTokenCreated=${creationTime.toUTCString()}; expires=${expiryTime.toUTCString()}; path=/; secure; samesite=strict`;
+        document.cookie = `medTokenScopes=${JSON.stringify(tokenScopes)}; expires=${expiryTime.toUTCString()}; path=/; secure; samesite=strict`;
+        
+        // Show success notification
+        // You could add a toast notification here
+      } else {
+        throw new Error(response.data?.message || "Failed to generate token");
+      }
+    } catch (error) {
+      console.error("Error generating token:", error);
+      // Could add error handling UI here
+    } finally {
+      setIsGeneratingToken(false);
+    }
+  };
+
   const handleCopyToken = () => {
     if (generatedToken) {
       navigator.clipboard.writeText(generatedToken);
@@ -402,7 +780,6 @@ export default function PatientDashboard() {
     }
   };
 
-  // Calculate percentage of time remaining
   const calculateTimeRemainingPercentage = () => {
     if (!tokenExpiry || !tokenCreationTime) return 0;
     
@@ -414,7 +791,6 @@ export default function PatientDashboard() {
     return 100 - percentage; // Return remaining percentage
   };
 
-  // Update token display formatting
   const formatTokenForDisplay = (token: string) => {
     if (!token) return "";
     const firstPart = token.substring(0, 8);
@@ -424,19 +800,99 @@ export default function PatientDashboard() {
     return `${firstPart}${maskedPart}${lastPart}`;
   };
 
-  // Handle closing modal without removing token
   const handleCloseModal = () => {
     setShowTokenModal(false);
     // Don't reset token state, just close the modal
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 -z-10" />
-      <div className="absolute inset-0 opacity-30 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:20px_20px] -z-10" />
+  const renderMedChainX = () => (
+    <div className="mb-6 p-4 bg-white dark:bg-gray-800 rounded-lg border-2 border-blue-500 shadow-md hover:shadow-lg transition-all overflow-hidden relative">
+      <div className="flex items-center justify-between">
+        <div className="z-10">
+          <h2 className="text-2xl font-bold text-blue-600 dark:text-blue-400">MedChainX</h2>
+          <p className="text-gray-600 dark:text-gray-300">Your secure blockchain-based medical records platform</p>
+        </div>
+        <div className="flex items-center">
+          <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 mr-2">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
+        </div>
+      </div>
       
-      {/* Token Generation Modal */}
+      {/* Animated elements */}
+      <div className="absolute -right-12 -top-12 h-24 w-24 bg-blue-100 dark:bg-blue-900/20 rounded-full opacity-50 animate-pulse"></div>
+      <div className="absolute right-20 bottom-0 h-3 w-3 bg-blue-400 dark:bg-blue-600 rounded-full animate-ping"></div>
+      <div className="absolute left-1/2 bottom-2 h-2 w-2 bg-blue-300 dark:bg-blue-500 rounded-full animate-pulse"></div>
+      
+      {/* Animated line */}
+      <div className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-blue-400 to-blue-600 animate-pulse" style={{
+        width: '100%',
+        animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+      }}></div>
+    </div>
+  )
+
+  // Add this function to display token scopes in a readable format
+  const getTokenScopesDisplay = () => {
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+      const [name, value] = cookie.trim().split('=');
+      if (name === 'medTokenScopes') {
+        try {
+          const scopes = JSON.parse(decodeURIComponent(value));
+          return scopes.map((scope: string) => {
+            // Format scope for display
+            return scope
+              .replace('_', ' ')
+              .replace('condition:', '')
+              .split(' ')
+              .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(' ');
+          }).join(', ');
+        } catch (e) {
+          return "Basic Information";
+        }
+      }
+    }
+    return "Basic Information";
+  };
+
+  if (loading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center h-[60vh]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-lg">Loading your medical data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-red-700 mb-2">Error Loading Data</h2>
+          <p className="text-red-600 mb-4">{error}</p>
+          <Button onClick={() => window.location.reload()}>Try Again</Button>
+        </div>
+      </div>
+    );
+  }
+  
+  const handleCloseProfile = () => {
+    setShowProfile(false);
+  };
+  
+  return (
+    <div className="container mx-auto p-6">
+      {renderMedChainX()}
+      
       {showTokenModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6 animate-in fade-in zoom-in duration-300">
@@ -560,7 +1016,6 @@ export default function PatientDashboard() {
                   Share this token with your healthcare provider
                 </p>
                 
-                {/* Enhanced Token Display */}
                 <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 p-4 rounded-md mb-4 relative border border-gray-200 dark:border-gray-600 shadow-inner">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-medium text-gray-500 dark:text-gray-400">ACCESS TOKEN</span>
@@ -582,7 +1037,14 @@ export default function PatientDashboard() {
                   </button>
                 </div>
                 
-                {/* Enhanced Token Expiry Countdown */}
+                {/* Add shared data scope information */}
+                <div className="mb-4 bg-blue-50 dark:bg-blue-900/20 p-4 rounded-md border border-blue-100 dark:border-blue-800">
+                  <h5 className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-2">Shared Data Access</h5>
+                  <p className="text-xs text-blue-700 dark:text-blue-400">
+                    {getTokenScopesDisplay()}
+                  </p>
+                </div>
+                
                 <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg border border-blue-200 dark:border-blue-800 p-4 shadow-sm">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center">
@@ -594,7 +1056,7 @@ export default function PatientDashboard() {
                     <div className="flex items-center">
                       <div className="w-2.5 h-2.5 bg-blue-500 rounded-full mr-2 animate-pulse"></div>
                       <span className="text-lg font-mono font-bold bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-md text-blue-700 dark:text-blue-300 tracking-wider">
-                        {remainingTime}
+                        {formattedTime}
                       </span>
                     </div>
                   </div>
@@ -637,14 +1099,33 @@ export default function PatientDashboard() {
                     variant="outline" 
                     className="border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
                     onClick={() => {
-                      setGeneratedToken(null);
-                      setTokenExpiry(null);
-                      setTokenCreationTime(null);
-                      // Clear cookies
-                      document.cookie = "medToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-                      document.cookie = "medTokenExpiry=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-                      document.cookie = "medTokenCreated=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-                      setShowTokenModal(false);
+                      // Call API to revoke token
+                      axios.post('/patient/revoke-token', {
+                        token: generatedToken
+                      }).then(() => {
+                        // Clear token state and cookies regardless of API response
+                        setGeneratedToken(null);
+                        setTokenExpiry(null);
+                        setTokenCreationTime(null);
+                        // Clear cookies
+                        document.cookie = "medToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                        document.cookie = "medTokenExpiry=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                        document.cookie = "medTokenCreated=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                        document.cookie = "medTokenScopes=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                        setShowTokenModal(false);
+                      }).catch(error => {
+                        console.error("Error revoking token:", error);
+                        // Still clear token state and cookies on error
+                        setGeneratedToken(null);
+                        setTokenExpiry(null);
+                        setTokenCreationTime(null);
+                        // Clear cookies
+                        document.cookie = "medToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                        document.cookie = "medTokenExpiry=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                        document.cookie = "medTokenCreated=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                        document.cookie = "medTokenScopes=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                        setShowTokenModal(false);
+                      });
                     }}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -676,7 +1157,6 @@ export default function PatientDashboard() {
         </div>
       )}
       
-      {/* Enhanced Active Token Indicator */}
       {generatedToken && tokenExpiry && (
         <div className="fixed bottom-4 right-4 z-40">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-4 border border-gray-200 dark:border-gray-700 max-w-xs animate-in slide-in-from-right-10 duration-300 hover:shadow-2xl transition-all">
@@ -693,7 +1173,7 @@ export default function PatientDashboard() {
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                   </svg>
                 </button>
                 <button 
@@ -716,7 +1196,7 @@ export default function PatientDashboard() {
             
             <div className="flex items-center justify-between mb-1.5 text-xs">
               <span className="text-gray-600 dark:text-gray-400">Expires in:</span>
-              <span className="font-mono font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded">{remainingTime}</span>
+              <span className="font-mono font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded">{formattedTime}</span>
             </div>
             
             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
@@ -730,12 +1210,14 @@ export default function PatientDashboard() {
       )}
       
       <div className="container mx-auto px-4 py-8">
-        {/* Header Section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Patient Dashboard</h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">Welcome back, John Doe</p>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
+              Welcome back, {patient ? `${patient.name.given.join(' ')} ${patient.name.family}` : 'Loading...'}
+            </p>
           </div>
+
           <div className="mt-4 md:mt-0 flex items-center gap-2">
             <Button 
               className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-6 py-5 text-base shadow-lg hover:shadow-xl transition-all"
@@ -746,26 +1228,39 @@ export default function PatientDashboard() {
               </svg>
               Generate Access Token
             </Button>
-            <Button variant="outline" className="flex items-center gap-2">
+            <Button 
+              variant={showProfile ? "default" : "outline"}
+              className="flex items-center gap-2"
+              onClick={() => setShowProfile(!showProfile)}
+            >
               <User className="h-4 w-4" />
               Profile
+            </Button>
+            <Button variant="outline" onClick={logout} className="flex items-center gap-2">
+              <LogOut className="h-4 w-4" />
+              Logout
             </Button>
           </div>
         </div>
         
-        {/* Main Dashboard Tabs */}
+        {showProfile && (
+          <PatientProfile 
+            patient={patient} 
+            onClose={handleCloseProfile} 
+          />
+        )}
+        
         <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid grid-cols-4 md:w-[600px]">
+          <TabsList className="grid grid-cols-5 md:w-[750px]">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="history">Medical History</TabsTrigger>
             <TabsTrigger value="medications">Medications</TabsTrigger>
+            <TabsTrigger value="risks">Health Risks</TabsTrigger>
             <TabsTrigger value="insights">AI Insights</TabsTrigger>
           </TabsList>
           
-          {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
-            {/* Prominent Token Generation Card - Enhanced with active token display */}
-            <Card className={`${generatedToken ? 'bg-gradient-to-r from-blue-500 to-blue-700 dark:from-blue-600 dark:to-blue-800' : 'bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700'} text-white hover:shadow-lg transition-all border-none mb-6`}>
+            <Card className={`${generatedToken ? 'bg-gradient-to-r from-blue-500 to-blue-700' : 'bg-gradient-to-r from-blue-500 to-blue-600'} text-white hover:shadow-lg transition-all border-none mb-6`}>
               <CardContent className="pt-6">
                 <div className="flex flex-col md:flex-row items-center justify-between">
                   <div className="flex items-center mb-4 md:mb-0">
@@ -780,7 +1275,7 @@ export default function PatientDashboard() {
                           <h3 className="text-xl font-bold">Active Access Token</h3>
                           <div className="flex items-center mt-1">
                             <div className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse"></div>
-                            <p className="text-blue-100">Expires in: {remainingTime}</p>
+                            <p className="text-blue-100">Expires in: {formattedTime}</p>
                           </div>
                         </>
                       ) : (
@@ -826,7 +1321,6 @@ export default function PatientDashboard() {
                   )}
                 </div>
                 
-                {/* Progress bar for active token */}
                 {generatedToken && (
                   <div className="mt-4">
                     <div className="w-full bg-white/20 rounded-full h-2 overflow-hidden">
@@ -840,58 +1334,15 @@ export default function PatientDashboard() {
               </CardContent>
             </Card>
             
-            {/* Health Metrics Grid */}
             <div className="">
               <HealthMetricsGrid metrics={healthMetrics} />
             </div>
             
-            {/* Health Charts */}
             <div className="mt-6">
               <HealthCharts chartData={mockChartData} />
             </div>
-            
-            {/* Risk Factors */}
-            <Card className="bg-white/90 dark:bg-gray-800/90 hover:shadow-md transition-all border border-gray-100 dark:border-gray-700">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <AlertTriangle className="h-5 w-5 mr-2 text-amber-500" />
-                  Health Risk Factors
-                </CardTitle>
-                <CardDescription>
-                  Personalized risk assessment based on your health data
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {riskFactors.map((factor, index) => (
-                    <div key={index} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
-                      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-2">
-                        <h4 className="font-semibold">{factor.name}</h4>
-                        <span className={`text-sm font-medium px-2 py-1 rounded-full ${
-                          factor.risk === "High" ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300" :
-                          factor.risk === "Moderate" ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300" :
-                          "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                        }`}>
-                          {factor.risk} Risk
-                        </span>
-                      </div>
-                      <Progress value={factor.score} className="h-2 mb-2" />
-                      <div className="mt-2">
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Recommendations:</p>
-                        <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside">
-                          {factor.recommendations.map((rec, i) => (
-                            <li key={i}>{rec}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
           </TabsContent>
           
-          {/* Medical History Tab */}
           <TabsContent value="history" className="space-y-6">
             {selectedMedicalRecord ? (
               <MedicalRecordDetail 
@@ -900,13 +1351,14 @@ export default function PatientDashboard() {
               />
             ) : (
               <MedicalHistoryList 
-                records={medicalHistory} 
+                records={patientMedicalRecords && patientMedicalRecords.length > 0 ? 
+                  patientMedicalRecords : 
+                  medicalHistory as DashboardMedicalRecord[]} 
                 onSelectRecord={handleRecordSelect} 
               />
             )}
           </TabsContent>
           
-          {/* Medications Tab */}
           <TabsContent value="medications" className="space-y-6">
             <Card className="bg-white/90 dark:bg-gray-800/90 hover:shadow-md transition-all border border-gray-100 dark:border-gray-700">
               <CardHeader>
@@ -917,32 +1369,68 @@ export default function PatientDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {medications.map((medication, index) => (
-                    <div key={index} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all">
-                      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-3">
-                        <h4 className="font-semibold">{medication.name}</h4>
-                        <span className="text-sm text-gray-500">Refill by: {medication.refillDate}</span>
+                  {(patient as any)?.prescriptions && (patient as any).prescriptions.length > 0 ? (
+                    (patient as any).prescriptions.map((prescription: any, index: number) => (
+                      <div key={index} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-3">
+                          <h4 className="font-semibold">{prescription.medication}</h4>
+                          <div className="flex items-center">
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 mr-2">
+                              Active
+                            </span>
+                            <span className="text-sm text-gray-500">
+                              Until: {new Date(prescription.endDate).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
+                            <div>
+                            <span className="text-gray-500">Dosage:</span> {prescription.dosage}
+                            </div>
+                            <div>
+                            <span className="text-gray-500">Frequency:</span> {prescription.frequency}
+                            </div>
+                            <div>
+                            <span className="text-gray-500">Prescribed by:</span> {prescription.prescribedBy}
+                          </div>
+                        </div>
+                        {prescription.instructions && (
+                          <div className="mt-3 pt-2 border-t border-gray-100 dark:border-gray-700">
+                            <p className="text-sm">
+                              <span className="text-gray-500">Instructions:</span> {prescription.instructions}
+                            </p>
+                        </div>
+                        )}
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
-                        <div>
-                          <span className="text-gray-500">Dosage:</span> {medication.dosage}
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Frequency:</span> {medication.frequency}
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Purpose:</span> {medication.purpose}
-                        </div>
-                      </div>
-                      <div className="mt-3">
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Adherence Rate:</p>
-                        <div className="flex items-center">
-                          <Progress value={medication.adherence} className="h-2 flex-1" />
-                          <span className="ml-2 text-sm font-medium">{medication.adherence}%</span>
-                        </div>
-                      </div>
+                    ))
+                  ) : (
+                    medications.map((medication: any, index: number) => (
+                      <div key={index} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-3">
+                          <h4 className="font-semibold">{medication.name}</h4>
+                          <span className="text-sm text-gray-500">Refill by: {medication.refillDate}</span>
                     </div>
-                  ))}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
+                          <div>
+                            <span className="text-gray-500">Dosage:</span> {medication.dosage}
+                            </div>
+                          <div>
+                            <span className="text-gray-500">Frequency:</span> {medication.frequency}
+                          </div>
+                            <div>
+                            <span className="text-gray-500">Purpose:</span> {medication.purpose}
+                          </div>
+                        </div>
+                        <div className="mt-3">
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Adherence Rate:</p>
+                              <div className="flex items-center">
+                            <Progress value={medication.adherence} className="h-2 flex-1" />
+                            <span className="ml-2 text-sm font-medium">{medication.adherence}%</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </CardContent>
               <CardFooter>
@@ -951,9 +1439,198 @@ export default function PatientDashboard() {
             </Card>
           </TabsContent>
           
-          {/* AI Insights Tab */}
+          <TabsContent value="risks" className="space-y-6">
+            <Card className="bg-white dark:bg-gray-800 hover:shadow-md transition-all border border-gray-100 dark:border-gray-700">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <AlertTriangle className="h-5 w-5 mr-2 text-amber-500" />
+                  Health Risk Factors
+                </CardTitle>
+                <CardDescription>
+                  Personalized risk assessment based on your health data
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoadingRisks ? (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary mb-4"></div>
+                    <p className="text-gray-600 dark:text-gray-400 text-lg">Analyzing your health data...</p>
+                    <p className="text-gray-500 dark:text-gray-500 text-sm mt-2">This may take a few moments</p>
+                    <div className="mt-6 w-48 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                      <div className="bg-blue-600 h-1.5 rounded-full animate-pulse" style={{width: '60%'}}></div>
+                    </div>
+                  </div>
+                ) : riskError ? (
+                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-center">
+                    <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+                    <p className="text-red-600 dark:text-red-400">{riskError}</p>
+                    <Button 
+                      variant="outline" 
+                      className="mt-4"
+                      onClick={fetchHealthRisks}
+                    >
+                      Try Again
+                    </Button>
+                  </div>
+                ) : riskFactors.length > 0 ? (
+                  <div className="space-y-6">
+                    {/* Overall Risk Summary Card */}
+                    <div className="bg-gradient-to-r from-amber-50 to-red-50 dark:from-amber-900/30 dark:to-red-900/30 p-6 rounded-lg shadow-sm border border-amber-100 dark:border-amber-800">
+                      <div className="flex items-start gap-4">
+                        <div className="bg-amber-100 dark:bg-amber-900/50 p-3 rounded-full">
+                          <AlertTriangle className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                            Overall Risk Level: <span className="text-red-600 dark:text-red-400 uppercase">High</span>
+                          </h3>
+                          <p className="text-gray-700 dark:text-gray-300">
+                            The patient is a young male diagnosed with Type 2 Diabetes and hypertension. Both conditions are currently not well-controlled, indicating a significant risk for cardiovascular complications and other diabetes-related issues.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {riskFactors.map((factor, index) => (
+                      <div key={index} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
+                        <div className="flex flex-col mb-4">
+                          <div className="flex justify-between items-center mb-2">
+                            <h3 className="text-xl font-medium text-gray-900 dark:text-white">{factor.name}</h3>
+                            <span className={`text-sm font-medium px-3 py-1 rounded-full ${
+                              factor.risk === "High" ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300" :
+                              factor.risk === "Moderate" ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300" :
+                              "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                            }`}>
+                              {factor.risk} Risk
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 mb-4">
+                            <div 
+                              className={`h-3 rounded-full ${
+                                factor.risk === "High" ? "bg-red-500 dark:bg-red-600" :
+                                factor.risk === "Moderate" ? "bg-amber-500 dark:bg-amber-600" :
+                                "bg-green-500 dark:bg-green-600"
+                              }`}
+                              style={{ width: `${factor.score}%` }}
+                            ></div>
+                          </div>
+                          
+                          {/* Description section */}
+                          {factor.description && (
+                            <div className="mt-2 mb-4">
+                              <p className="text-gray-700 dark:text-gray-300">{factor.description}</p>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="mt-4">
+                          <h4 className="font-medium text-gray-900 dark:text-white mb-2">Recommendations:</h4>
+                          <ul className="space-y-2 pl-1">
+                            {factor.recommendations.map((rec, i) => (
+                              <li key={i} className="flex items-start">
+                                <span className="inline-flex items-center justify-center flex-shrink-0 w-5 h-5 mr-2 mt-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full">
+                                  <span className="text-xs">•</span>
+                                </span>
+                                <span className="text-gray-700 dark:text-gray-300">{rec}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        
+                        {factor.lifestyle && (
+                          <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
+                            <h4 className="font-medium text-gray-900 dark:text-white mb-3">Lifestyle Recommendations:</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
+                                <h5 className="text-sm font-medium text-gray-900 dark:text-white mb-1">Diet</h5>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">{factor.lifestyle.diet}</p>
+                              </div>
+                              <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
+                                <h5 className="text-sm font-medium text-gray-900 dark:text-white mb-1">Exercise</h5>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">{factor.lifestyle.exercise}</p>
+                              </div>
+                              <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
+                                <h5 className="text-sm font-medium text-gray-900 dark:text-white mb-1">Habits</h5>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">{factor.lifestyle.habits}</p>
+                              </div>
+                              <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
+                                <h5 className="text-sm font-medium text-gray-900 dark:text-white mb-1">Monitoring</h5>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">{factor.lifestyle.monitoring}</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    
+                    {/* Recommended Screenings Card */}
+                    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
+                      <div className="flex items-center mb-4">
+                        <div className="bg-blue-100 dark:bg-blue-900/50 p-2 rounded-full mr-3">
+                          <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <h3 className="text-xl font-medium text-gray-900 dark:text-white">Recommended Screenings</h3>
+                      </div>
+                      <ul className="space-y-2 pl-1">
+                        {["Annual eye examination for diabetic retinopathy", 
+                          "Regular kidney function tests", 
+                          "Lipid profile screening to assess cardiovascular risk"].map((screening, i) => (
+                          <li key={i} className="flex items-start">
+                            <span className="inline-flex items-center justify-center flex-shrink-0 w-5 h-5 mr-2 mt-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full">
+                              <span className="text-xs">•</span>
+                            </span>
+                            <span className="text-gray-700 dark:text-gray-300">{screening}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    
+                    {/* Lifestyle Recommendations Card */}
+                    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
+                      <div className="flex items-center mb-4">
+                        <div className="bg-green-100 dark:bg-green-900/50 p-2 rounded-full mr-3">
+                          <Wind className="h-5 w-5 text-green-600 dark:text-green-400" />
+                        </div>
+                        <h3 className="text-xl font-medium text-gray-900 dark:text-white">Lifestyle Recommendations</h3>
+                      </div>
+                      <ul className="space-y-2 pl-1">
+                        {["Adopt a balanced diet low in sugar and saturated fats", 
+                          "Engage in regular physical activity (at least 150 minutes of moderate exercise per week)", 
+                          "Implement stress management techniques such as meditation or yoga"].map((lifestyle, i) => (
+                          <li key={i} className="flex items-start">
+                            <span className="inline-flex items-center justify-center flex-shrink-0 w-5 h-5 mr-2 mt-0.5 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-full">
+                              <span className="text-xs">•</span>
+                            </span>
+                            <span className="text-gray-700 dark:text-gray-300">{lifestyle}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-full mb-4">
+                      <BarChart3 className="h-10 w-10 text-blue-500" />
+                    </div>
+                    <h3 className="text-xl font-semibold mb-2">Analyze Your Health Risks</h3>
+                    <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md">
+                      Get personalized health risk assessments based on your medical history and current health metrics.
+                    </p>
+                    <Button 
+                      onClick={fetchHealthRisks} 
+                      className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 px-6 py-2 shadow-md"
+                    >
+                      <AlertTriangle className="h-4 w-4" />
+                      Analyze Health Risks
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
           <TabsContent value="insights" className="space-y-6">
-            <AiHealthInsights patientName="John" />
+            <AiHealthInsights patientName={patient?.name?.given?.[0] || "John"} />
           </TabsContent>
         </Tabs>
       </div>

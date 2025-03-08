@@ -1,8 +1,9 @@
+import { useState } from "react";
 import { ChevronLeft, FileText, User, Calendar, Clipboard, FilePlus2, Download, Share2, Sparkles, Pill, Microscope } from "lucide-react";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
 
 // Import the MedicalRecord interface
 interface MedicalRecord {
@@ -22,12 +23,14 @@ interface MedicalRecord {
     dosage: string;
     frequency: string;
     duration: string;
+    instructions?: string;
   }>;
   labResults: Array<{
     name: string;
     result: string;
     referenceRange: string;
     date: string;
+    interpretation?: string;
   }>;
   attachments: Array<{
     name: string;
@@ -35,6 +38,8 @@ interface MedicalRecord {
     url: string;
   }>;
   followUp: string;
+  status?: string;
+  tags?: Array<string>;
 }
 
 interface MedicalRecordDetailProps {
@@ -47,9 +52,34 @@ export function MedicalRecordDetail({ record, onClose }: MedicalRecordDetailProp
   
   // Mock AI summary for the medical record
   const aiSummary = {
-    diagnosis: "Based on the symptoms and examination, this appears to be a routine check-up with normal findings. All vital signs are within normal ranges.",
-    treatment: "No specific treatment was prescribed beyond the recommended vitamin D supplement, which is appropriate given the findings.",
-    followUp: "The recommended 6-month follow-up is standard protocol for routine check-ups and appropriate for this case."
+    diagnosis: `Based on the data, this appears to be a ${record.description.toLowerCase()} record with ${
+      record.labResults.some(lab => lab.interpretation?.toLowerCase() === 'high' || lab.interpretation?.toLowerCase() === 'elevated') ? 'some abnormal' : 'normal'
+    } findings.`,
+    treatment: record.prescriptions.length > 0 
+      ? `Treatment includes ${record.prescriptions.map(p => p.name).join(', ')}.` 
+      : "No specific treatment was prescribed for this visit.",
+    followUp: `The recommended follow-up is ${record.followUp}.`
+  };
+  
+  // Function to get appropriate color based on record type
+  const getRecordTypeColor = (type: string, tags: string[] = []) => {
+    const lowerType = type.toLowerCase();
+    const lowerTags = tags.map(t => t.toLowerCase());
+    
+    if (lowerType.includes('diabetes') || lowerTags.includes('diabetes')) {
+      return 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800';
+    }
+    if (lowerType.includes('cardio') || lowerType.includes('heart') || lowerTags.includes('hypertension') || lowerTags.includes('cardiology')) {
+      return 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800';
+    }
+    if (lowerType.includes('vaccination') || lowerTags.includes('vaccination') || lowerTags.includes('preventive')) {
+      return 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800';
+    }
+    if (lowerType.includes('lab') || lowerType.includes('test') || lowerTags.includes('lab')) {
+      return 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800';
+    }
+    
+    return 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800';
   };
   
   return (
@@ -60,6 +90,15 @@ export function MedicalRecordDetail({ record, onClose }: MedicalRecordDetailProp
           Back to Medical History
         </Button>
         <div className="flex items-center gap-2">
+          <Button 
+            variant={showAiSummary ? "default" : "outline"} 
+            size="sm" 
+            className="flex items-center"
+            onClick={() => setShowAiSummary(!showAiSummary)}
+          >
+            <Sparkles className="h-4 w-4 mr-1" />
+            {showAiSummary ? "Hide AI Summary" : "Show AI Summary"}
+          </Button>
           <Button variant="outline" size="sm" className="flex items-center">
             <Download className="h-4 w-4 mr-1" />
             Export
@@ -77,13 +116,18 @@ export function MedicalRecordDetail({ record, onClose }: MedicalRecordDetailProp
             <FileText className="h-5 w-5 mr-2 text-primary" />
             Medical Record Details
           </CardTitle>
+          {record.status && (
+            <Badge variant={record.status === 'final' ? 'default' : 'outline'} className="ml-2">
+              {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
+            </Badge>
+          )}
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
             {/* Header information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <h3 className="text-lg font-semibold mb-2">{record.type}: {record.description}</h3>
+                <h3 className="text-lg font-semibold mb-2">{record.description}</h3>
                 <div className="flex items-center text-sm text-gray-500 mb-1">
                   <Calendar className="h-4 w-4 mr-1" />
                   <span>Date: {record.date}</span>
@@ -92,6 +136,15 @@ export function MedicalRecordDetail({ record, onClose }: MedicalRecordDetailProp
                   <User className="h-4 w-4 mr-1" />
                   <span>Doctor: {record.doctor.name} ({record.doctor.specialty})</span>
                 </div>
+                {record.tags && record.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {record.tags.map((tag, idx) => (
+                      <Badge key={idx} variant="outline" className="bg-blue-50 dark:bg-blue-900/20">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg">
                 <h4 className="font-medium mb-1">Hospital Information</h4>
@@ -135,7 +188,7 @@ export function MedicalRecordDetail({ record, onClose }: MedicalRecordDetailProp
                     {record.prescriptions.map((prescription, index) => (
                       <div key={index} className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
                         <h5 className="font-medium">{prescription.name}</h5>
-                        <div className="grid grid-cols-3 gap-2 mt-1 text-sm">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-1 text-sm">
                           <div>
                             <span className="text-gray-500">Dosage:</span> {prescription.dosage}
                           </div>
@@ -146,6 +199,11 @@ export function MedicalRecordDetail({ record, onClose }: MedicalRecordDetailProp
                             <span className="text-gray-500">Duration:</span> {prescription.duration}
                           </div>
                         </div>
+                        {prescription.instructions && (
+                          <div className="mt-2 text-sm">
+                            <span className="text-gray-500">Instructions:</span> {prescription.instructions}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -160,9 +218,28 @@ export function MedicalRecordDetail({ record, onClose }: MedicalRecordDetailProp
                 {record.labResults.length > 0 ? (
                   <div className="space-y-3">
                     {record.labResults.map((lab, index) => (
-                      <div key={index} className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
-                        <h5 className="font-medium">{lab.name}</h5>
-                        <div className="grid grid-cols-3 gap-2 mt-1 text-sm">
+                      <div key={index} className={`bg-white dark:bg-gray-800 p-3 rounded-lg border ${
+                        lab.interpretation?.toLowerCase() === 'high' || lab.interpretation?.toLowerCase() === 'elevated' 
+                          ? 'border-red-200 dark:border-red-700' 
+                          : lab.interpretation?.toLowerCase() === 'low' 
+                            ? 'border-yellow-200 dark:border-yellow-700'
+                            : 'border-gray-100 dark:border-gray-700'
+                      }`}>
+                        <div className="flex justify-between items-center">
+                          <h5 className="font-medium">{lab.name}</h5>
+                          {lab.interpretation && (
+                            <Badge variant={
+                              lab.interpretation.toLowerCase() === 'high' || lab.interpretation.toLowerCase() === 'elevated' 
+                                ? 'destructive' 
+                                : lab.interpretation.toLowerCase() === 'low' 
+                                  ? 'secondary'
+                                  : 'outline'
+                            }>
+                              {lab.interpretation}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-1 text-sm">
                           <div>
                             <span className="text-gray-500">Result:</span> {lab.result}
                           </div>
@@ -184,7 +261,7 @@ export function MedicalRecordDetail({ record, onClose }: MedicalRecordDetailProp
               </TabsContent>
               
               <TabsContent value="attachments">
-                {record.attachments.length > 0 ? (
+                {record.attachments && record.attachments.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {record.attachments.map((attachment, index) => (
                       <div key={index} className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700 flex items-center">
@@ -221,10 +298,19 @@ export function MedicalRecordDetail({ record, onClose }: MedicalRecordDetailProp
               AI Summary
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p>{aiSummary.diagnosis}</p>
-            <p>{aiSummary.treatment}</p>
-            <p>{aiSummary.followUp}</p>
+          <CardContent className="space-y-3">
+            <div>
+              <h4 className="text-sm font-medium text-gray-500">Diagnosis</h4>
+              <p>{aiSummary.diagnosis}</p>
+            </div>
+            <div>
+              <h4 className="text-sm font-medium text-gray-500">Treatment</h4>
+              <p>{aiSummary.treatment}</p>
+            </div>
+            <div>
+              <h4 className="text-sm font-medium text-gray-500">Follow-up</h4>
+              <p>{aiSummary.followUp}</p>
+            </div>
           </CardContent>
         </Card>
       )}

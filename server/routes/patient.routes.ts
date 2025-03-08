@@ -1,44 +1,25 @@
 import express from 'express';
-import {
-  registerPatient,
-  getPatients,
-  getPatient,
-  updatePatient,
-  deletePatient,
-  addDoctorToPatient,
-  removeDoctorFromPatient,
-  getPatientMedicalReports,
-  getPatientDoctors,
-  exportPatientFHIR,
-  getPatientMedicalHistory
+import { 
+  registerPatient, 
+  getPatientById, 
+  generateHealthRiskAnalysis,
+  generatePatientAccessToken,
+  verifyPatientToken,
+  decodePatientAccessToken,
+  revokePatientToken
 } from '../controllers/patient.controller';
-import { protect, authorize } from '../middleware/auth';
 
 const router = express.Router();
 
-// Public routes
+// Patient registration and data retrieval
 router.post('/register', registerPatient);
+router.get('/:id', getPatientById);
+router.get('/:id/health-risks', generateHealthRiskAnalysis);
 
-// Protected routes
-router.get('/', protect, authorize('admin', 'doctor', 'hospital'), getPatients);
-router.get('/:id', protect, authorize('admin', 'doctor', 'hospital', 'patient'), getPatient);
-router.put('/:id', protect, authorize('admin', 'hospital', 'patient'), updatePatient);
-router.delete('/:id', protect, authorize('admin', 'hospital'), deletePatient);
+// Token management routes
+router.post('/generate-token', generatePatientAccessToken); // POST route to send patientId and expiresIn
+router.post('/verify-token', verifyPatientToken);          // Verify token validity
+router.post('/decode-token', decodePatientAccessToken);    // Decode token without verification
+router.post('/revoke-token', revokePatientToken);          // Revoke a patient token
 
-// Doctor assignment routes
-router.post('/:id/doctors', protect, authorize('admin', 'doctor', 'hospital'), addDoctorToPatient);
-router.delete('/:id/doctors/:doctorId', protect, authorize('admin', 'doctor', 'hospital'), removeDoctorFromPatient);
-
-// Medical reports routes
-router.get('/:id/medical-reports', protect, authorize('admin', 'doctor', 'hospital', 'patient'), getPatientMedicalReports);
-
-// Get patient's doctors
-router.get('/:id/doctors', protect, authorize('admin', 'doctor', 'hospital', 'patient'), getPatientDoctors);
-
-// Export FHIR representation
-router.get('/:id/fhir', protect, authorize('admin', 'doctor', 'hospital', 'patient'), exportPatientFHIR);
-
-// Get patient's medical history
-router.get('/:id/medical-history', protect, authorize('admin', 'doctor', 'hospital', 'patient'), getPatientMedicalHistory);
-
-export default router; 
+export default router;

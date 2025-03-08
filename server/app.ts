@@ -9,13 +9,14 @@ import morgan from 'morgan';
 // Import routes
 // import authRoutes from './routes/auth.routes';
 import patientRoutes from './routes/patient.routes';
+import hospitalRoutes from './routes/hospital.routes';
 // import doctorRoutes from './routes/doctor.routes';
-// import hospitalRoutes from './routes/hospital.routes';
 // import medicalRecordRoutes from './routes/medicalRecord.routes';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
 import { notFound } from './middleware/notFound';
+import doctorRoutes from './routes/doctor.routes';
 
 // Load environment variables
 dotenv.config();
@@ -31,7 +32,7 @@ mongoose.connect(process.env.MONGODB_URI as string)
 
 // Middleware
 app.use(cors({
-  origin: process.env.CLIENT_URL,
+  origin: "http://localhost:3000",
   credentials: true
 }));
 app.use(express.json());
@@ -41,11 +42,9 @@ app.use(helmet());
 app.use(morgan('dev'));
 
 // Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/patients', patientRoutes);
-app.use('/api/doctors', doctorRoutes);
+app.use('/api/patient', patientRoutes);
 app.use('/api/hospitals', hospitalRoutes);
-app.use('/api/records', medicalRecordRoutes);
+app.use('/api/doctor', doctorRoutes);
 
 // Error handling middleware
 app.use(notFound);

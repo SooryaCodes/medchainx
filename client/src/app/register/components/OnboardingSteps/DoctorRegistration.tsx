@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,13 +7,21 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle, X, UserIcon, Stethoscope, Clock, Building2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
+import axios from "@/lib/axios";
+import { useRouter } from "next/navigation";
+import { setAuthCookies } from "@/lib/cookies";
+import { DoctorRegistrationData, RegistrationResponse } from "@/types/auth";
+import toast from "react-hot-toast";
 
 type DoctorRegistrationProps = {
   step: number;
   setStep: (step: number) => void;
+  handleNext: () => void;
+  handleBack: () => void;
 };
 
 export default function DoctorRegistration({ step, setStep }: DoctorRegistrationProps) {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     // Authentication Info
     username: "",
@@ -51,12 +59,41 @@ export default function DoctorRegistration({ step, setStep }: DoctorRegistration
     ],
   });
 
-  // Mock hospital data (in a real app, this would come from an API)
-  const hospitals = [
-    { id: "1", name: "General Hospital" },
-    { id: "2", name: "City Medical Center" },
-    { id: "3", name: "University Hospital" },
-  ];
+  // Replace mock hospital data with state
+  const [hospitals, setHospitals] = useState<Array<{id: string, name: string}>>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Fetch hospitals data on component mount
+  useEffect(() => {
+    const fetchHospitals = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await axios.get('/hospitals');
+        console.log(response.data, "response.data hospitals");
+        
+        // Transform the data to ensure it has the correct structure
+        let hospitalData = Array.isArray(response.data) ? response.data : 
+                          (response.data.hospitals || response.data.data || []);
+        
+        // Ensure each hospital has id and name properties
+        hospitalData = hospitalData.map((hospital: any) => ({
+          id: hospital.id || hospital._id || hospital.hospitalId || '',
+          name: hospital.name || hospital.hospitalName || ''
+        }));
+        
+        setHospitals(hospitalData);
+      } catch (err) {
+        console.error('Failed to fetch hospitals:', err);
+        setError('Failed to load hospitals. Please try again later.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchHospitals();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -105,6 +142,166 @@ export default function DoctorRegistration({ step, setStep }: DoctorRegistration
     const updatedLanguages = [...formData.languages_spoken];
     updatedLanguages.splice(index, 1);
     setFormData(prev => ({ ...prev, languages_spoken: updatedLanguages }));
+  };
+
+  // Add validation functions for each step
+  const validateStep1 = async () => {
+    // Validate username, password, confirm_password
+    if (!formData.username || formData.username.length < 4) {
+      setError("Username must be at least 4 characters");
+      toast.error("Username must be at least 4 characters");
+      return false;
+    }
+    
+    if (!formData.password || formData.password.length < 8) {
+      setError("Password must be at least 8 characters");
+      toast.error("Password must be at least 8 characters");
+      return false;
+    }
+    
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])/;
+    if (!passwordRegex.test(formData.password)) {
+      setError("Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character");
+      toast.error("Password must meet complexity requirements");
+      return false;
+    }
+    
+    if (formData.password !== formData.confirm_password) {
+      setError("Passwords do not match");
+      toast.error("Passwords do not match");
+      return false;
+    }
+    
+    setError("");
+    setStep(2);
+    return true;
+  };
+  
+  const validateStep2 = async () => {
+    // Validate personal and professional info
+    if (!formData.given_name || formData.given_name.length < 2) {
+      setError("First name must be at least 2 characters");
+      toast.error("First name must be at least 2 characters");
+      return false;
+    }
+    
+    if (!formData.family_name || formData.family_name.length < 2) {
+      setError("Last name must be at least 2 characters");
+      toast.error("Last name must be at least 2 characters");
+      return false;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!formData.email || !emailRegex.test(formData.email)) {
+      setError("Invalid email address");
+      toast.error("Invalid email address");
+      return false;
+    }
+    
+    const phoneRegex = /^\+?[1-9]\d{9,14}$/;
+    if (!formData.phone || !phoneRegex.test(formData.phone)) {
+      setError("Phone number must start with a '+' followed by 9 to 14 digits");
+      toast.error("Invalid phone number format");
+      return false;
+    }
+    
+    if (!formData.specialty) {
+      setError("Specialty is required");
+      toast.error("Please select your specialty");
+      return false;
+    }
+    
+    if (!formData.years_of_experience) {
+      setError("Years of experience is required");
+      toast.error("Please enter your years of experience");
+      return false;
+    }
+    
+    if (!formData.license_number || formData.license_number.length < 5) {
+      setError("Valid license number is required");
+      toast.error("Please enter a valid license number");
+      return false;
+    }
+    
+    if (!formData.consultation_fee) {
+      setError("Consultation fee is required");
+      toast.error("Please enter your consultation fee");
+      return false;
+    }
+    
+    if (!formData.hospital_id) {
+      setError("Hospital affiliation is required");
+      toast.error("Please select your hospital affiliation");
+      return false;
+    }
+    
+    setError("");
+    setStep(3);
+    return true;
+  };
+  
+  const validateStep3 = async () => {
+    // Validate schedule
+    let hasValidSchedule = false;
+    
+    for (const timing of formData.available_timings) {
+      if (timing.enabled) {
+        if (!timing.startTime || !timing.endTime) {
+          setError("Please set both start and end times for enabled days");
+          toast.error("Please set both start and end times for enabled days");
+          return false;
+        }
+        
+        if (timing.startTime >= timing.endTime) {
+          setError("End time must be after start time");
+          toast.error("End time must be after start time");
+          return false;
+        }
+        
+        hasValidSchedule = true;
+      }
+    }
+    
+    if (!hasValidSchedule) {
+      setError("Please enable at least one day in your schedule");
+      toast.error("Please enable at least one day in your schedule");
+      return false;
+    }
+    
+    setError("");
+    return true;
+  };
+  
+  const handleSubmit = async () => {
+    const isValid = await validateStep3();
+    if (!isValid) return;
+    
+    try {
+      setIsLoading(true);
+      setError("");
+      
+      // Format the data as needed
+      const formattedData = {
+        ...formData,
+        phone: formData.phone.startsWith('+') ? formData.phone : `+${formData.phone}`,
+        // Filter out disabled days or format as needed
+        available_timings: formData.available_timings.filter(timing => timing.enabled)
+      };
+      
+      const response = await axios.post<RegistrationResponse>('/doctor/register', formattedData);
+      
+      if (response.data.success) {
+        const { doctorToken, doctorId } = response.data.data;
+        setAuthCookies(doctorToken!, doctorId!, 'doctor');
+        toast.success("Registration successful! You have been registered as a doctor.");
+        router.push('/doctor/dashboard');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+      toast.error(err.response?.data?.message || 'Registration failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const renderStep1 = () => (
@@ -204,6 +401,21 @@ export default function DoctorRegistration({ step, setStep }: DoctorRegistration
           />
         </div>
       </div>
+      
+      {error && (
+        <div className="text-red-500 text-sm mt-2">
+          {error}
+        </div>
+      )}
+      
+      <div className="flex justify-end mt-6">
+        <Button 
+          onClick={validateStep1}
+          className="bg-blue-600 hover:bg-blue-700 text-white"
+        >
+          Next
+        </Button>
+      </div>
     </div>
   );
 
@@ -264,12 +476,16 @@ export default function DoctorRegistration({ step, setStep }: DoctorRegistration
         <div className="space-y-2 md:col-span-2">
           <Label htmlFor="hospital_id">Hospital Affiliation</Label>
           <Select onValueChange={(value) => handleSelectChange("hospital_id", value)}>
-            <SelectTrigger className="border-blue-200">
+            <SelectTrigger className="border-blue-200 bg-white dark:bg-gray-800">
               <SelectValue placeholder="Select hospital" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white dark:bg-gray-800">
               {hospitals.map((hospital) => (
-                <SelectItem key={hospital.id} value={hospital.id}>
+                <SelectItem 
+                  key={hospital.id} 
+                  value={hospital.id}
+                  className="hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                >
                   {hospital.name}
                 </SelectItem>
               ))}
@@ -322,6 +538,27 @@ export default function DoctorRegistration({ step, setStep }: DoctorRegistration
           <PlusCircle className="h-4 w-4 mr-2" /> Add Language
         </Button>
       </div>
+      
+      {error && (
+        <div className="text-red-500 text-sm mt-2">
+          {error}
+        </div>
+      )}
+      
+      <div className="flex justify-between mt-6">
+        <Button 
+          variant="outline" 
+          onClick={() => setStep(1)}
+        >
+          Back
+        </Button>
+        <Button 
+          onClick={validateStep2}
+          className="bg-blue-600 hover:bg-blue-700 text-white"
+        >
+          Next
+        </Button>
+      </div>
     </div>
   );
 
@@ -370,6 +607,29 @@ export default function DoctorRegistration({ step, setStep }: DoctorRegistration
       
       <div className="mt-4 text-sm text-gray-500 dark:text-gray-400">
         <p>Note: Your availability will be used to generate appointment slots for patients.</p>
+      </div>
+      
+      {error && (
+        <div className="text-red-500 text-sm mt-2">
+          {error}
+        </div>
+      )}
+      
+      <div className="flex justify-between mt-6">
+        <Button 
+          variant="outline" 
+          onClick={() => setStep(2)}
+          disabled={isLoading}
+        >
+          Back
+        </Button>
+        <Button 
+          onClick={handleSubmit}
+          disabled={isLoading}
+          className="bg-blue-600 hover:bg-blue-700 text-white"
+        >
+          {isLoading ? "Registering..." : "Complete Registration"}
+        </Button>
       </div>
     </div>
   );

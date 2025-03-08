@@ -1,374 +1,481 @@
-import { useState } from "react";
+"use client";
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { UserIcon, Phone, MapPin, Heart, UserPlus } from "lucide-react";
+import axiosInstance from '@/lib/axios';
+import { setAuthCookies } from '@/lib/cookies';
+import { useRouter } from 'next/navigation';
+import { PatientRegistrationData, RegistrationResponse } from '@/types/auth';
 
-type PatientRegistrationProps = {
+const patientSchema = z.object({
+  username: z.string().min(4, 'Username must be at least 4 characters'),
+  password: z.string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])/, 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'),
+  firstName: z.string().min(2, 'First name must be at least 2 characters'),
+  lastName: z.string().min(2, 'Last name must be at least 2 characters'),
+  email: z.string().email('Invalid email address'),
+  phone: z.string()
+    .regex(/^\+?[1-9]\d{9,14}$/, 'Phone number must start with a "+" followed by 9 to 14 digits.'),
+  dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format'),
+  gender: z.enum(['male', 'female', 'other']),
+  address: z.object({
+    street: z.string().min(5, 'Street address is required'),
+    city: z.string().min(2, 'City is required'),
+    state: z.string().min(2, 'State is required'),
+    postalCode: z.string().min(4, 'Valid postal code is required'),
+    country: z.string().min(2, 'Country is required')
+  }),
+  emergencyContact: z.object({
+    name: z.string().min(2, 'Emergency contact name is required'),
+    phone: z.string().regex(/^\+?[1-9]\d{9,14}$/, 'Invalid emergency contact phone number'),
+    relationship: z.string().min(2, 'Relationship is required')
+  }),
+  bloodType: z.enum(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']),
+  healthInsuranceId: z.string().min(8, 'Valid health insurance ID is required'),
+  nationalId: z.string().min(8, 'Valid national ID is required')
+});
+
+type Props = {
   step: number;
   setStep: (step: number) => void;
+  handleNext: () => void;
+  handleBack: () => void;
 };
 
-export default function PatientRegistration({ step, setStep }: PatientRegistrationProps) {
-  const [formData, setFormData] = useState({
-    // Authentication Info
-    username: "",
-    password: "",
-    confirm_password: "",
-    
-    // Personal Info (matches schema)
-    name: {
-      given: [""], // First name will be stored here
-      family: "",  // Last name
-    },
-    birthDate: "",
-    gender: "",
-    
-    // Contact Info
-    contact: {
-      phone: "",
-      email: "",
-    },
-    
-    // Address (will be stored in user profile)
-    address: {
-      street: "",
-      city: "",
-      state: "",
-      postalCode: "",
-      country: "",
-    },
-    
-    // Emergency Contact
-    emergencyContact: {
-      name: "",
-      phone: "",
-      relationship: "", // Additional field for relationship
-    },
-    
-    // Additional fields for registration
-    bloodType: "",
-    healthInsuranceId: "",
-    nationalId: "",
+export default function PatientRegistration({ step, setStep }: Props) {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const {
+    register,
+    handleSubmit,
+    trigger,
+    formState: { errors },
+    watch,
+    setValue,
+  } = useForm<PatientRegistrationData>({
+    resolver: zodResolver(patientSchema),
+    mode: 'onSubmit',
   });
 
-  type FormDataKeys = keyof typeof formData;
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    
-    // Handle nested fields
-    if (name.includes('.')) {
-      const [parent, child] = name.split('.');
-      setFormData(prev => {
-        // Create a safe copy with proper typing
-        const parentObj = (prev[parent as FormDataKeys] && 
-                           typeof prev[parent as FormDataKeys] === 'object' && 
-                           prev[parent as FormDataKeys] !== null) 
-                           ? {...prev[parent as FormDataKeys] as Record<string, any>} 
-                           : {};
-        
-        return {
-          ...prev,
-          [parent as FormDataKeys]: {
-            ...parentObj,
-            [child]: value
-          }
-        };
-      });
-    } else {
-      setFormData(prev => ({ ...prev, [name as FormDataKeys]: value }));
+  const validateStep1 = async () => {
+    const result = await trigger([
+      'username',
+      'password',
+      'firstName',
+      'lastName',
+      'email',
+      'nationalId',
+    ]);
+    if (result) {
+      setStep(2);
     }
   };
 
-  const handleGivenNameChange = (value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      name: {
-        ...prev.name,
-        given: [value]
+  const validateStep2 = async () => {
+    const result = await trigger([
+      'dateOfBirth',
+      'gender',
+      'bloodType',
+      'healthInsuranceId',
+    ]);
+    if (result) {
+      setStep(3);
+    }
+  };
+
+  const onSubmit = async (data: PatientRegistrationData) => {
+    try {
+      setIsLoading(true);
+      setError('');
+      
+      const formattedData = {
+        ...data,
+        phone: data.phone.startsWith('+') ? data.phone : `+${data.phone}`,
+        emergencyContact: {
+          ...data.emergencyContact,
+          phone: data.emergencyContact.phone.startsWith('+') ? 
+            data.emergencyContact.phone : 
+            `+${data.emergencyContact.phone}`
+        }
+      };
+
+      const response = await axiosInstance.post<RegistrationResponse>('/patient/register', formattedData);
+      
+      if (response.data.success) {
+        const { patientToken, patientId } = response.data.data;
+        setAuthCookies(patientToken, patientId);
+        router.push('/patient/dashboard');
       }
-    }));
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const renderStep1 = () => (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+  const Step1 = ({ register, errors, validateStep1 }: any) => (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3 mb-6">
+        <UserIcon className="h-6 w-6 text-blue-600" />
+        <h2 className="text-xl font-semibold text-blue-800 dark:text-blue-300">Account Information</h2>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2 md:col-span-2">
           <Label htmlFor="username">Username</Label>
           <Input 
-            id="username" 
-            name="username" 
-            value={formData.username} 
-            onChange={handleChange} 
+            {...register('username')}
             placeholder="Choose a username"
             className="border-blue-200 focus:border-blue-400"
           />
+          {errors.username && (
+            <p className="text-red-500 text-sm mt-1">{errors.username.message}</p>
+          )}
         </div>
+        
         <div className="space-y-2">
           <Label htmlFor="password">Password</Label>
           <Input 
-            id="password" 
-            name="password" 
+            {...register('password')}
             type="password"
-            value={formData.password} 
-            onChange={handleChange} 
             placeholder="Create a password"
             className="border-blue-200 focus:border-blue-400"
           />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="confirm_password">Confirm Password</Label>
-          <Input 
-            id="confirm_password" 
-            name="confirm_password" 
-            type="password"
-            value={formData.confirm_password} 
-            onChange={handleChange} 
-            placeholder="Confirm your password"
-            className="border-blue-200 focus:border-blue-400"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="given_name">First Name</Label>
-          <Input 
-            id="given_name" 
-            name="given_name" 
-            value={formData.name.given[0]} 
-            onChange={(e) => handleGivenNameChange(e.target.value)} 
-            placeholder="Enter your first name"
-            className="border-blue-200 focus:border-blue-400"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="family">Last Name</Label>
-          <Input 
-            id="family" 
-            name="name.family" 
-            value={formData.name.family} 
-            onChange={handleChange} 
-            placeholder="Enter your last name"
-            className="border-blue-200 focus:border-blue-400"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="birthDate">Date of Birth</Label>
-          <Input 
-            id="birthDate" 
-            name="birthDate" 
-            type="date" 
-            value={formData.birthDate} 
-            onChange={handleChange}
-            className="border-blue-200 focus:border-blue-400"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="gender">Gender</Label>
-          <Select onValueChange={(value) => handleSelectChange("gender", value)}>
-            <SelectTrigger className="border-blue-200">
-              <SelectValue placeholder="Select gender" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="male">Male</SelectItem>
-              <SelectItem value="female">Female</SelectItem>
-              <SelectItem value="other">Other</SelectItem>
-            </SelectContent>
-          </Select>
+          {errors.password && (
+            <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
+          )}
         </div>
       </div>
-    </div>
-  );
 
-  const renderStep2 = () => (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-2">
-          <Label htmlFor="email">Email Address</Label>
-          <Input 
-            id="email" 
-            name="contact.email" 
-            type="email" 
-            value={formData.contact.email} 
-            onChange={handleChange} 
-            placeholder="Enter your email"
-            className="border-blue-200 focus:border-blue-400"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="phone">Phone Number</Label>
-          <Input 
-            id="phone" 
-            name="contact.phone" 
-            value={formData.contact.phone} 
-            onChange={handleChange} 
-            placeholder="Enter your phone number"
-            className="border-blue-200 focus:border-blue-400"
-          />
-        </div>
-        <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="street">Street Address</Label>
-          <Textarea 
-            id="street" 
-            name="address.street" 
-            value={formData.address.street} 
-            onChange={handleChange} 
-            placeholder="Enter your street address"
-            className="border-blue-200 focus:border-blue-400"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="city">City</Label>
-          <Input 
-            id="city" 
-            name="address.city" 
-            value={formData.address.city} 
-            onChange={handleChange} 
-            placeholder="Enter your city"
-            className="border-blue-200 focus:border-blue-400"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="state">State/Province</Label>
-          <Input 
-            id="state" 
-            name="address.state" 
-            value={formData.address.state} 
-            onChange={handleChange} 
-            placeholder="Enter your state"
-            className="border-blue-200 focus:border-blue-400"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="postalCode">ZIP/Postal Code</Label>
-          <Input 
-            id="postalCode" 
-            name="address.postalCode" 
-            value={formData.address.postalCode} 
-            onChange={handleChange} 
-            placeholder="Enter your ZIP code"
-            className="border-blue-200 focus:border-blue-400"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="country">Country</Label>
-          <Input 
-            id="country" 
-            name="address.country" 
-            value={formData.address.country} 
-            onChange={handleChange} 
-            placeholder="Enter your country"
-            className="border-blue-200 focus:border-blue-400"
-          />
-        </div>
+      <div className="flex items-center gap-3 mt-8 mb-4">
+        <UserPlus className="h-6 w-6 text-blue-600" />
+        <h2 className="text-xl font-semibold text-blue-800 dark:text-blue-300">Personal Information</h2>
       </div>
-    </div>
-  );
 
-  const renderStep3 = () => (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="bloodType">Blood Type</Label>
-          <Select onValueChange={(value) => handleSelectChange("bloodType", value)}>
-            <SelectTrigger className="border-blue-200">
-              <SelectValue placeholder="Select blood type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="A+">A+</SelectItem>
-              <SelectItem value="A-">A-</SelectItem>
-              <SelectItem value="B+">B+</SelectItem>
-              <SelectItem value="B-">B-</SelectItem>
-              <SelectItem value="AB+">AB+</SelectItem>
-              <SelectItem value="AB-">AB-</SelectItem>
-              <SelectItem value="O+">O+</SelectItem>
-              <SelectItem value="O-">O-</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="healthInsuranceId">Health Insurance ID</Label>
+          <Label htmlFor="firstName">First Name</Label>
           <Input 
-            id="healthInsuranceId" 
-            name="healthInsuranceId" 
-            value={formData.healthInsuranceId} 
-            onChange={handleChange} 
-            placeholder="Enter your insurance ID"
+            {...register('firstName')}
+            placeholder="Enter first name"
             className="border-blue-200 focus:border-blue-400"
           />
+          {errors.firstName && (
+            <p className="text-red-500 text-sm mt-1">{errors.firstName.message}</p>
+          )}
         </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="lastName">Last Name</Label>
+          <Input 
+            {...register('lastName')}
+            placeholder="Enter last name"
+            className="border-blue-200 focus:border-blue-400"
+          />
+          {errors.lastName && (
+            <p className="text-red-500 text-sm mt-1">{errors.lastName.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input 
+            {...register('email')}
+            type="email"
+            placeholder="Enter email address"
+            className="border-blue-200 focus:border-blue-400"
+          />
+          {errors.email && (
+            <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
+          )}
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="nationalId">National ID</Label>
           <Input 
-            id="nationalId" 
-            name="nationalId" 
-            value={formData.nationalId} 
-            onChange={handleChange} 
-            placeholder="Enter your national ID"
+            {...register('nationalId')}
+            placeholder="Enter national ID"
             className="border-blue-200 focus:border-blue-400"
           />
+          {errors.nationalId && (
+            <p className="text-red-500 text-sm mt-1">{errors.nationalId.message}</p>
+          )}
         </div>
-        <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="emergencyName">Emergency Contact Name</Label>
-          <Input 
-            id="emergencyName" 
-            name="emergencyContact.name" 
-            value={formData.emergencyContact.name} 
-            onChange={handleChange} 
-            placeholder="Enter emergency contact name"
-            className="border-blue-200 focus:border-blue-400"
-          />
-        </div>
+      </div>
+      <div className="flex justify-end mt-6">
+        <Button
+          type="button"
+          onClick={validateStep1}
+          className="bg-blue-600 hover:bg-blue-700"
+        >
+          Next Step
+        </Button>
+      </div>
+    </div>
+  );
+
+  const Step2 = ({ register, errors, validateStep2, setValue }: any) => (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3 mb-6">
+        <Heart className="h-6 w-6 text-blue-600" />
+        <h2 className="text-xl font-semibold text-blue-800 dark:text-blue-300">Health Information</h2>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="emergencyRelationship">Relationship</Label>
+          <Label htmlFor="dateOfBirth">Date of Birth</Label>
           <Input 
-            id="emergencyRelationship" 
-            name="emergencyContact.relationship" 
-            value={formData.emergencyContact.relationship} 
-            onChange={handleChange} 
-            placeholder="Enter relationship"
+            {...register('dateOfBirth')}
+            type="date"
             className="border-blue-200 focus:border-blue-400"
           />
+          {errors.dateOfBirth && (
+            <p className="text-red-500 text-sm mt-1">{errors.dateOfBirth.message}</p>
+          )}
         </div>
+
         <div className="space-y-2">
-          <Label htmlFor="emergencyPhone">Emergency Contact Number</Label>
+          <Label htmlFor="gender">Gender</Label>
+          <Select onValueChange={(value) => setValue('gender', value as 'male' | 'female' | 'other')}>
+            <SelectTrigger className="border-blue-200 bg-white dark:bg-gray-800">
+              <SelectValue placeholder="Select gender" />
+            </SelectTrigger>
+            <SelectContent className="bg-white dark:bg-gray-800">
+              <SelectItem value="male" className="hover:bg-blue-50 dark:hover:bg-blue-900/30">Male</SelectItem>
+              <SelectItem value="female" className="hover:bg-blue-50 dark:hover:bg-blue-900/30">Female</SelectItem>
+              <SelectItem value="other" className="hover:bg-blue-50 dark:hover:bg-blue-900/30">Other</SelectItem>
+            </SelectContent>
+          </Select>
+          {errors.gender && (
+            <p className="text-red-500 text-sm mt-1">{errors.gender.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="bloodType">Blood Type</Label>
+          <Select onValueChange={(value) => setValue('bloodType', value as 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-')}>
+            <SelectTrigger className="border-blue-200 bg-white dark:bg-gray-800">
+              <SelectValue placeholder="Select blood type" />
+            </SelectTrigger>
+            <SelectContent className="bg-white dark:bg-gray-800">
+              {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((type) => (
+                <SelectItem 
+                  key={type} 
+                  value={type}
+                  className="hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                >
+                  {type}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {errors.bloodType && (
+            <p className="text-red-500 text-sm mt-1">{errors.bloodType.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="healthInsuranceId">Health Insurance ID</Label>
           <Input 
-            id="emergencyPhone" 
-            name="emergencyContact.phone" 
-            value={formData.emergencyContact.phone} 
-            onChange={handleChange} 
-            placeholder="Enter emergency contact number"
+            {...register('healthInsuranceId')}
+            placeholder="Enter health insurance ID"
             className="border-blue-200 focus:border-blue-400"
           />
+          {errors.healthInsuranceId && (
+            <p className="text-red-500 text-sm mt-1">{errors.healthInsuranceId.message}</p>
+          )}
         </div>
+      </div>
+      <div className="flex justify-between mt-6">
+        <Button
+          type="button"
+          onClick={() => setStep(1)}
+          variant="outline"
+          className="border-blue-600 text-blue-600"
+        >
+          Previous Step
+        </Button>
+        <Button
+          type="button"
+          onClick={validateStep2}
+          className="bg-blue-600 hover:bg-blue-700"
+        >
+          Next Step
+        </Button>
+      </div>
+    </div>
+  );
+
+  const Step3 = ({ register, errors, isLoading, onSubmit, setStep }: any) => (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3 mb-6">
+        <MapPin className="h-6 w-6 text-blue-600" />
+        <h2 className="text-xl font-semibold text-blue-800 dark:text-blue-300">Contact Information</h2>
+      </div>
+      
+      <div className="grid grid-cols-1 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="phone">Phone Number</Label>
+          <Input 
+            {...register('phone')}
+            placeholder="Enter phone number"
+            className="border-blue-200 focus:border-blue-400"
+          />
+          {errors.phone && (
+            <p className="text-red-500 text-sm mt-1">{errors.phone.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="address.street">Street Address</Label>
+          <Input 
+            {...register('address.street')}
+            placeholder="Enter street address"
+            className="border-blue-200 focus:border-blue-400"
+          />
+          {errors.address?.street && (
+            <p className="text-red-500 text-sm mt-1">{errors.address.street.message}</p>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="address.city">City</Label>
+            <Input 
+              {...register('address.city')}
+              placeholder="Enter city"
+              className="border-blue-200 focus:border-blue-400"
+            />
+            {errors.address?.city && (
+              <p className="text-red-500 text-sm mt-1">{errors.address.city.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="address.state">State</Label>
+            <Input 
+              {...register('address.state')}
+              placeholder="Enter state"
+              className="border-blue-200 focus:border-blue-400"
+            />
+            {errors.address?.state && (
+              <p className="text-red-500 text-sm mt-1">{errors.address.state.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="address.postalCode">Postal Code</Label>
+            <Input 
+              {...register('address.postalCode')}
+              placeholder="Enter postal code"
+              className="border-blue-200 focus:border-blue-400"
+            />
+            {errors.address?.postalCode && (
+              <p className="text-red-500 text-sm mt-1">{errors.address.postalCode.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="address.country">Country</Label>
+            <Input 
+              {...register('address.country')}
+              placeholder="Enter country"
+              className="border-blue-200 focus:border-blue-400"
+            />
+            {errors.address?.country && (
+              <p className="text-red-500 text-sm mt-1">{errors.address.country.message}</p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 mt-8 mb-4">
+          <Phone className="h-6 w-6 text-blue-600" />
+          <h2 className="text-xl font-semibold text-blue-800 dark:text-blue-300">Emergency Contact</h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="emergencyContact.name">Contact Name</Label>
+            <Input 
+              {...register('emergencyContact.name')}
+              placeholder="Enter emergency contact name"
+              className="border-blue-200 focus:border-blue-400"
+            />
+            {errors.emergencyContact?.name && (
+              <p className="text-red-500 text-sm mt-1">{errors.emergencyContact.name.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="emergencyContact.phone">Contact Phone</Label>
+            <Input 
+              {...register('emergencyContact.phone')}
+              placeholder="Enter emergency contact phone"
+              className="border-blue-200 focus:border-blue-400"
+            />
+            {errors.emergencyContact?.phone && (
+              <p className="text-red-500 text-sm mt-1">{errors.emergencyContact.phone.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="emergencyContact.relationship">Relationship</Label>
+            <Input 
+              {...register('emergencyContact.relationship')}
+              placeholder="Enter relationship to emergency contact"
+              className="border-blue-200 focus:border-blue-400"
+            />
+            {errors.emergencyContact?.relationship && (
+              <p className="text-red-500 text-sm mt-1">{errors.emergencyContact.relationship.message}</p>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="flex justify-between mt-6">
+        <Button
+          type="button"
+          onClick={() => setStep(2)}
+          variant="outline"
+          className="border-blue-600 text-blue-600"
+        >
+          Previous Step
+        </Button>
+        <Button
+          type="submit"
+          disabled={isLoading}
+          className="bg-blue-600 hover:bg-blue-700"
+        >
+          {isLoading ? 'Registering...' : 'Complete Registration'}
+        </Button>
       </div>
     </div>
   );
 
   return (
-    <Card className="border-0 shadow-lg bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm dark:from-gray-900/80 dark:to-gray-800/60">
-      <CardContent className="p-8">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-primary">
-            {step === 1 && "Account & Personal Information"}
-            {step === 2 && "Contact Information"}
-            {step === 3 && "Medical Information"}
-          </h2>
-          <p className="text-muted-foreground mt-1">
-            {step === 1 && "Create your account and provide your basic details"}
-            {step === 2 && "How can we reach you?"}
-            {step === 3 && "Important health information for your records"}
-          </p>
-        </div>
-        
-        {step === 1 && renderStep1()}
-        {step === 2 && renderStep2()}
-        {step === 3 && renderStep3()}
-      </CardContent>
-    </Card>
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <Card className="border-blue-100 dark:border-blue-900">
+        <CardContent className="p-6">
+          {error && (
+            <div className="p-4 mb-6 bg-red-50 text-red-600 rounded-lg">
+              {error}
+            </div>
+          )}
+          
+          {step === 1 && <Step1 register={register} errors={errors} validateStep1={validateStep1} />}
+          {step === 2 && <Step2 register={register} errors={errors} validateStep2={validateStep2} setValue={setValue} />}
+          {step === 3 && <Step3 register={register} errors={errors} isLoading={isLoading} onSubmit={onSubmit} setStep={setStep} />}
+        </CardContent>
+      </Card>
+    </form>
   );
 }
