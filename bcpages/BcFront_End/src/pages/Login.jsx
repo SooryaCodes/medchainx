@@ -7,7 +7,7 @@ const Login = ({ onClose }) => {
 
     const handleLogin = () => {
         if (role === "doctor") {
-            navigate("/doctor-dashboard");
+            navigate("/doctor-dashboard/"+data[0].id);
         } else {
             navigate("/user-dashboard");
         }
