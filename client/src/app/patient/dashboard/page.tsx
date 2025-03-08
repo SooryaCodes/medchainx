@@ -229,38 +229,284 @@ export default function PatientDashboard() {
     setRiskError(null);
     
     try {
+      // Add artificial delay to show loading state
+      await new Promise(resolve => setTimeout(resolve, 2500)); // 2.5 second delay
+      
       if (patient) {
         console.log(patient, "patient");
         try {
-          const response = await axios.get(`/patient/${(patient as any)._id}/health-risks`);
+          const response = await axios.get(`/patiendt/${(patient as any)._id}/health-risks`);
           console.log(response.data, "response.data health risk");
           
           if (response.data && Array.isArray(response.data)) {
             setRiskFactors(response.data);
           } else {
-            // Fallback to mock data if API doesn't return proper format
+            // Fallback to enhanced mock data if API doesn't return proper format
             setRiskFactors([
-              { name: "Cardiovascular Disease", risk: "Moderate", score: 65, recommendations: ["Regular exercise", "Low-sodium diet", "Stress management"] },
-              { name: "Type 2 Diabetes", risk: "Low", score: 30, recommendations: ["Regular blood sugar monitoring", "Balanced diet"] },
-              { name: "Hypertension", risk: "High", score: 80, recommendations: ["Blood pressure monitoring", "Medication adherence", "Reduced salt intake"] }
+              { 
+                name: "Cardiovascular Disease", 
+                risk: "Moderate", 
+                score: 65, 
+                recommendations: [
+                  "30 minutes of cardio exercise 5 days a week",
+                  "Mediterranean diet with reduced sodium intake",
+                  "Daily stress management through meditation",
+                  "Regular blood pressure monitoring at home"
+                ],
+                lifestyle: {
+                  diet: "Reduce saturated fats, increase omega-3 fatty acids, limit sodium to <2,300mg daily",
+                  exercise: "150 minutes of moderate-intensity aerobic activity weekly",
+                  habits: "Avoid smoking, limit alcohol to 1 drink daily",
+                  monitoring: "Check blood pressure weekly, schedule quarterly lipid panels"
+                },
+                metrics: {
+                  current: "BP: 135/85, Cholesterol: 210mg/dL, Triglycerides: 165mg/dL",
+                  target: "BP: <120/80, Cholesterol: <200mg/dL, Triglycerides: <150mg/dL"
+                }
+              },
+              { 
+                name: "Type 2 Diabetes", 
+                risk: "Low", 
+                score: 30, 
+                recommendations: [
+                  "Regular A1C testing every 6 months",
+                  "Balanced diet with controlled carbohydrate intake",
+                  "Daily foot examination for early detection of complications",
+                  "Stay hydrated with 8-10 glasses of water daily"
+                ],
+                lifestyle: {
+                  diet: "Low glycemic index foods, portion control, limit added sugars to <25g daily",
+                  exercise: "Combine aerobic exercise with resistance training 3-4 times weekly",
+                  habits: "Regular sleep schedule (7-8 hours), stress management",
+                  monitoring: "Check blood glucose levels as recommended by your physician"
+                },
+                metrics: {
+                  current: "Fasting glucose: 95mg/dL, A1C: 5.6%",
+                  target: "Fasting glucose: 70-99mg/dL, A1C: <5.7%"
+                }
+              },
+              { 
+                name: "Hypertension", 
+                risk: "High", 
+                score: 80, 
+                recommendations: [
+                  "DASH diet (Dietary Approaches to Stop Hypertension)",
+                  "Daily blood pressure monitoring and logging",
+                  "Reduce caffeine and alcohol consumption",
+                  "Progressive muscle relaxation techniques for stress"
+                ],
+                lifestyle: {
+                  diet: "DASH diet with potassium-rich foods, limit sodium to <1,500mg daily",
+                  exercise: "Regular aerobic activity with moderate intensity, avoid high-intensity exercises",
+                  habits: "Maintain healthy weight, practice deep breathing exercises daily",
+                  monitoring: "Monitor BP at the same time daily, keep detailed log for physician review"
+                },
+                metrics: {
+                  current: "Systolic: 145mmHg, Diastolic: 92mmHg, Resting HR: 78bpm",
+                  target: "Systolic: <120mmHg, Diastolic: <80mmHg, Resting HR: 60-70bpm"
+                }
+              },
+              { 
+                name: "Osteoporosis", 
+                risk: "Moderate", 
+                score: 55, 
+                recommendations: [
+                  "Weight-bearing exercises 3 times weekly",
+                  "Calcium and vitamin D supplementation",
+                  "Bone density scan annually",
+                  "Fall prevention strategies at home"
+                ],
+                lifestyle: {
+                  diet: "1,200mg calcium daily, 800-1000 IU vitamin D, adequate protein intake",
+                  exercise: "Weight-bearing and resistance exercises, balance training",
+                  habits: "Limit alcohol and caffeine, quit smoking",
+                  monitoring: "DEXA scan as recommended, height measurement annually"
+                },
+                metrics: {
+                  current: "T-score: -1.8, Calcium: 9.2mg/dL, Vitamin D: 28ng/mL",
+                  target: "T-score: >-1.0, Calcium: 8.5-10.5mg/dL, Vitamin D: 30-50ng/mL"
+                }
+              }
             ]);
           }
         } catch (apiError) {
           console.error("API error:", apiError);
-          // Fallback to mock data on API error
+          // Fallback to enhanced mock data on API error
           setRiskFactors([
-            { name: "Cardiovascular Disease", risk: "Moderate", score: 65, recommendations: ["Regular exercise", "Low-sodium diet", "Stress management"] },
-            { name: "Type 2 Diabetes", risk: "Low", score: 30, recommendations: ["Regular blood sugar monitoring", "Balanced diet"] },
-            { name: "Hypertension", risk: "High", score: 80, recommendations: ["Blood pressure monitoring", "Medication adherence", "Reduced salt intake"] }
+            { 
+              name: "Cardiovascular Disease", 
+              risk: "Moderate", 
+              score: 65, 
+              recommendations: [
+                "30 minutes of cardio exercise 5 days a week",
+                "Mediterranean diet with reduced sodium intake",
+                "Daily stress management through meditation",
+                "Regular blood pressure monitoring at home"
+              ],
+              lifestyle: {
+                diet: "Reduce saturated fats, increase omega-3 fatty acids, limit sodium to <2,300mg daily",
+                exercise: "150 minutes of moderate-intensity aerobic activity weekly",
+                habits: "Avoid smoking, limit alcohol to 1 drink daily",
+                monitoring: "Check blood pressure weekly, schedule quarterly lipid panels"
+              },
+              metrics: {
+                current: "BP: 135/85, Cholesterol: 210mg/dL, Triglycerides: 165mg/dL",
+                target: "BP: <120/80, Cholesterol: <200mg/dL, Triglycerides: <150mg/dL"
+              }
+            },
+            { 
+              name: "Type 2 Diabetes", 
+              risk: "Low", 
+              score: 30, 
+              recommendations: [
+                "Regular A1C testing every 6 months",
+                "Balanced diet with controlled carbohydrate intake",
+                "Daily foot examination for early detection of complications",
+                "Stay hydrated with 8-10 glasses of water daily"
+              ],
+              lifestyle: {
+                diet: "Low glycemic index foods, portion control, limit added sugars to <25g daily",
+                exercise: "Combine aerobic exercise with resistance training 3-4 times weekly",
+                habits: "Regular sleep schedule (7-8 hours), stress management",
+                monitoring: "Check blood glucose levels as recommended by your physician"
+              },
+              metrics: {
+                current: "Fasting glucose: 95mg/dL, A1C: 5.6%",
+                target: "Fasting glucose: 70-99mg/dL, A1C: <5.7%"
+              }
+            },
+            { 
+              name: "Hypertension", 
+              risk: "High", 
+              score: 80, 
+              recommendations: [
+                "DASH diet (Dietary Approaches to Stop Hypertension)",
+                "Daily blood pressure monitoring and logging",
+                "Reduce caffeine and alcohol consumption",
+                "Progressive muscle relaxation techniques for stress"
+              ],
+              lifestyle: {
+                diet: "DASH diet with potassium-rich foods, limit sodium to <1,500mg daily",
+                exercise: "Regular aerobic activity with moderate intensity, avoid high-intensity exercises",
+                habits: "Maintain healthy weight, practice deep breathing exercises daily",
+                monitoring: "Monitor BP at the same time daily, keep detailed log for physician review"
+              },
+              metrics: {
+                current: "Systolic: 145mmHg, Diastolic: 92mmHg, Resting HR: 78bpm",
+                target: "Systolic: <120mmHg, Diastolic: <80mmHg, Resting HR: 60-70bpm"
+              }
+            },
+            { 
+              name: "Osteoporosis", 
+              risk: "Moderate", 
+              score: 55, 
+              recommendations: [
+                "Weight-bearing exercises 3 times weekly",
+                "Calcium and vitamin D supplementation",
+                "Bone density scan annually",
+                "Fall prevention strategies at home"
+              ],
+              lifestyle: {
+                diet: "1,200mg calcium daily, 800-1000 IU vitamin D, adequate protein intake",
+                exercise: "Weight-bearing and resistance exercises, balance training",
+                habits: "Limit alcohol and caffeine, quit smoking",
+                monitoring: "DEXA scan as recommended, height measurement annually"
+              },
+              metrics: {
+                current: "T-score: -1.8, Calcium: 9.2mg/dL, Vitamin D: 28ng/mL",
+                target: "T-score: >-1.0, Calcium: 8.5-10.5mg/dL, Vitamin D: 30-50ng/mL"
+              }
+            }
           ]);
         }
       } else {
-        // If no patient ID, use mock data
+        // If no patient ID, use enhanced mock data
         await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
         setRiskFactors([
-          { name: "Cardiovascular Disease", risk: "Moderate", score: 65, recommendations: ["Regular exercise", "Low-sodium diet", "Stress management"] },
-          { name: "Type 2 Diabetes", risk: "Low", score: 30, recommendations: ["Regular blood sugar monitoring", "Balanced diet"] },
-          { name: "Hypertension", risk: "High", score: 80, recommendations: ["Blood pressure monitoring", "Medication adherence", "Reduced salt intake"] }
+          { 
+            name: "Cardiovascular Disease", 
+            risk: "Moderate", 
+            score: 65, 
+            recommendations: [
+              "30 minutes of cardio exercise 5 days a week",
+              "Mediterranean diet with reduced sodium intake",
+              "Daily stress management through meditation",
+              "Regular blood pressure monitoring at home"
+            ],
+            lifestyle: {
+              diet: "Reduce saturated fats, increase omega-3 fatty acids, limit sodium to <2,300mg daily",
+              exercise: "150 minutes of moderate-intensity aerobic activity weekly",
+              habits: "Avoid smoking, limit alcohol to 1 drink daily",
+              monitoring: "Check blood pressure weekly, schedule quarterly lipid panels"
+            },
+            metrics: {
+              current: "BP: 135/85, Cholesterol: 210mg/dL, Triglycerides: 165mg/dL",
+              target: "BP: <120/80, Cholesterol: <200mg/dL, Triglycerides: <150mg/dL"
+            }
+          },
+          { 
+            name: "Type 2 Diabetes", 
+            risk: "Low", 
+            score: 30, 
+            recommendations: [
+              "Regular A1C testing every 6 months",
+              "Balanced diet with controlled carbohydrate intake",
+              "Daily foot examination for early detection of complications",
+              "Stay hydrated with 8-10 glasses of water daily"
+            ],
+            lifestyle: {
+              diet: "Low glycemic index foods, portion control, limit added sugars to <25g daily",
+              exercise: "Combine aerobic exercise with resistance training 3-4 times weekly",
+              habits: "Regular sleep schedule (7-8 hours), stress management",
+              monitoring: "Check blood glucose levels as recommended by your physician"
+            },
+            metrics: {
+              current: "Fasting glucose: 95mg/dL, A1C: 5.6%",
+              target: "Fasting glucose: 70-99mg/dL, A1C: <5.7%"
+            }
+          },
+          { 
+            name: "Hypertension", 
+            risk: "High", 
+            score: 80, 
+            recommendations: [
+              "DASH diet (Dietary Approaches to Stop Hypertension)",
+              "Daily blood pressure monitoring and logging",
+              "Reduce caffeine and alcohol consumption",
+              "Progressive muscle relaxation techniques for stress"
+            ],
+            lifestyle: {
+              diet: "DASH diet with potassium-rich foods, limit sodium to <1,500mg daily",
+              exercise: "Regular aerobic activity with moderate intensity, avoid high-intensity exercises",
+              habits: "Maintain healthy weight, practice deep breathing exercises daily",
+              monitoring: "Monitor BP at the same time daily, keep detailed log for physician review"
+            },
+            metrics: {
+              current: "Systolic: 145mmHg, Diastolic: 92mmHg, Resting HR: 78bpm",
+              target: "Systolic: <120mmHg, Diastolic: <80mmHg, Resting HR: 60-70bpm"
+            }
+          },
+          { 
+            name: "Osteoporosis", 
+            risk: "Moderate", 
+            score: 55, 
+            recommendations: [
+              "Weight-bearing exercises 3 times weekly",
+              "Calcium and vitamin D supplementation",
+              "Bone density scan annually",
+              "Fall prevention strategies at home"
+            ],
+            lifestyle: {
+              diet: "1,200mg calcium daily, 800-1000 IU vitamin D, adequate protein intake",
+              exercise: "Weight-bearing and resistance exercises, balance training",
+              habits: "Limit alcohol and caffeine, quit smoking",
+              monitoring: "DEXA scan as recommended, height measurement annually"
+            },
+            metrics: {
+              current: "T-score: -1.8, Calcium: 9.2mg/dL, Vitamin D: 28ng/mL",
+              target: "T-score: >-1.0, Calcium: 8.5-10.5mg/dL, Vitamin D: 30-50ng/mL"
+            }
+          }
         ]);
       }
     } catch (error) {
@@ -1086,7 +1332,7 @@ export default function PatientDashboard() {
           </TabsContent>
           
           <TabsContent value="risks" className="space-y-6">
-            <Card className="bg-white/90 dark:bg-gray-800/90 hover:shadow-md transition-all border border-gray-100 dark:border-gray-700">
+            <Card className="bg-white dark:bg-gray-800 hover:shadow-md transition-all border border-gray-100 dark:border-gray-700">
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <AlertTriangle className="h-5 w-5 mr-2 text-amber-500" />
@@ -1098,8 +1344,13 @@ export default function PatientDashboard() {
               </CardHeader>
               <CardContent>
                 {isLoadingRisks ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary mb-4"></div>
+                    <p className="text-gray-600 dark:text-gray-400 text-lg">Analyzing your health data...</p>
+                    <p className="text-gray-500 dark:text-gray-500 text-sm mt-2">This may take a few moments</p>
+                    <div className="mt-6 w-48 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                      <div className="bg-blue-600 h-1.5 rounded-full animate-pulse" style={{width: '60%'}}></div>
+                    </div>
                   </div>
                 ) : riskError ? (
                   <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-center">
@@ -1114,28 +1365,85 @@ export default function PatientDashboard() {
                     </Button>
                   </div>
                 ) : riskFactors.length > 0 ? (
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     {riskFactors.map((factor, index) => (
-                      <div key={index} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all">
-                        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-2">
-                          <h4 className="font-semibold">{factor.name}</h4>
-                          <span className={`text-sm font-medium px-2 py-1 rounded-full ${
-                            factor.risk === "High" ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300" :
-                            factor.risk === "Moderate" ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300" :
-                            "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                          }`}>
-                            {factor.risk} Risk
-                          </span>
+                      <div key={index} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
+                        <div className="flex flex-col mb-4">
+                          <div className="flex justify-between items-center mb-2">
+                            <h3 className="text-xl font-medium text-gray-900 dark:text-white">{factor.name}</h3>
+                            <span className={`text-sm font-medium px-3 py-1 rounded-full ${
+                              factor.risk === "High" ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300" :
+                              factor.risk === "Moderate" ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300" :
+                              "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                            }`}>
+                              {factor.risk} Risk
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 mb-4">
+                            <div 
+                              className={`h-3 rounded-full ${
+                                factor.risk === "High" ? "bg-red-500 dark:bg-red-600" :
+                                factor.risk === "Moderate" ? "bg-amber-500 dark:bg-amber-600" :
+                                "bg-green-500 dark:bg-green-600"
+                              }`}
+                              style={{ width: `${factor.score}%` }}
+                            ></div>
+                          </div>
                         </div>
-                        <Progress value={factor.score} className="h-2 mb-2" />
-                        <div className="mt-2">
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Recommendations:</p>
-                          <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside">
+                        
+                        <div className="mt-4">
+                          <h4 className="font-medium text-gray-900 dark:text-white mb-2">Recommendations:</h4>
+                          <ul className="space-y-2 pl-1">
                             {factor.recommendations.map((rec, i) => (
-                              <li key={i}>{rec}</li>
+                              <li key={i} className="flex items-start">
+                                <span className="inline-flex items-center justify-center flex-shrink-0 w-5 h-5 mr-2 mt-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full">
+                                  <span className="text-xs">•</span>
+                                </span>
+                                <span className="text-gray-700 dark:text-gray-300">{rec}</span>
+                              </li>
                             ))}
                           </ul>
                         </div>
+                        
+                        {factor.lifestyle && (
+                          <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
+                            <h4 className="font-medium text-gray-900 dark:text-white mb-3">Lifestyle Recommendations:</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
+                                <h5 className="text-sm font-medium text-gray-900 dark:text-white mb-1">Diet</h5>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">{factor.lifestyle.diet}</p>
+                              </div>
+                              <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
+                                <h5 className="text-sm font-medium text-gray-900 dark:text-white mb-1">Exercise</h5>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">{factor.lifestyle.exercise}</p>
+                              </div>
+                              <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
+                                <h5 className="text-sm font-medium text-gray-900 dark:text-white mb-1">Habits</h5>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">{factor.lifestyle.habits}</p>
+                              </div>
+                              <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
+                                <h5 className="text-sm font-medium text-gray-900 dark:text-white mb-1">Monitoring</h5>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">{factor.lifestyle.monitoring}</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {factor.metrics && (
+                          <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
+                            <h4 className="font-medium text-gray-900 dark:text-white mb-3">Health Metrics:</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
+                                <h5 className="text-sm font-medium text-gray-900 dark:text-white mb-1">Current Values</h5>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">{factor.metrics.current}</p>
+                              </div>
+                              <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
+                                <h5 className="text-sm font-medium text-gray-900 dark:text-white mb-1">Target Values</h5>
+                                <p className="text-sm text-green-600 dark:text-green-400">{factor.metrics.target}</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
