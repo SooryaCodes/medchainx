@@ -9,8 +9,8 @@ import Settings from "./pages/Settings";
 import BlockchainView from "./pages/BlockchainView"; // Import the new component
 
 const UserDashboardWrapper = () => {
-    const { userId } = useParams();
-    return <UserDashboard userId={userId} />;
+  const { userId } = useParams();
+  return <UserDashboard userId={userId} />;
 };
 
 const AppRoutes = () => {
@@ -19,7 +19,7 @@ const AppRoutes = () => {
   return (
     <Routes key={location.pathname} location={location}>
       <Route path="/" element={<Login />} />
-      <Route path="/user-dashboard" element={<UserDashboard />} />
+      <Route path="/user-dashboard/:userId" element={<UserDashboardWrapper />} />
       <Route path="/doctor-dashboard" element={<DoctorDashboard />} />
       <Route path="/appointment" element={<Appointment />} />
       <Route path="/help" element={<Help />} />

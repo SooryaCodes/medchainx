@@ -1,12 +1,30 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
+import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 
+const App = () => {
+  const userId = "john-doe"; // Replace with dynamic user ID
+
+  return (
+    <Router>
+      <Routes>
+        <Route path="/user-dashboard" element={<UserDashboard userId={userId} />} />
+        {/* Other routes */}
+      </Routes>
+    </Router>
+  );
+};
 const UserDashboard = ({ userId }) => {
   const [activeTab, setActiveTab] = useState("labResults");
   const [patientData, setPatientData] = useState(null);
 
   useEffect(() => {
+    if (!userId) {
+      console.error("User ID is undefined");
+      return;
+    }
+
     const fetchPatientData = async () => {
       try {
         const response = await fetch(`http://localhost:3000/api/patient/get-patient-by-name/${userId}`);
