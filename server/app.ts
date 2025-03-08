@@ -9,13 +9,14 @@ import morgan from 'morgan';
 // Import routes
 // import authRoutes from './routes/auth.routes';
 import patientRoutes from './routes/patient.routes';
+import hospitalRoutes from './routes/hospital.routes';
 // import doctorRoutes from './routes/doctor.routes';
-// import hospitalRoutes from './routes/hospital.routes';
 // import medicalRecordRoutes from './routes/medicalRecord.routes';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
 import { notFound } from './middleware/notFound';
+import doctorRoutes from './routes/doctor.routes';
 
 // Load environment variables
 dotenv.config();
@@ -42,7 +43,8 @@ app.use(morgan('dev'));
 
 // Routes
 app.use('/api/patient', patientRoutes);
-
+app.use('/api/hospitals', hospitalRoutes);
+app.use('/api/doctor', doctorRoutes);
 
 // Error handling middleware
 app.use(notFound);

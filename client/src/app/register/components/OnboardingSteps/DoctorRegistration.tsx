@@ -11,7 +11,7 @@ import axios from "@/lib/axios";
 import { useRouter } from "next/navigation";
 import { setAuthCookies } from "@/lib/cookies";
 import { DoctorRegistrationData, RegistrationResponse } from "@/types/auth";
-import { toast } from "@/components/ui/use-toast";
+import toast from "react-hot-toast";
 
 type DoctorRegistrationProps = {
   step: number;
@@ -71,7 +71,19 @@ export default function DoctorRegistration({ step, setStep }: DoctorRegistration
       setError(null);
       try {
         const response = await axios.get('/hospitals');
-        setHospitals(response.data);
+        console.log(response.data, "response.data hospitals");
+        
+        // Transform the data to ensure it has the correct structure
+        let hospitalData = Array.isArray(response.data) ? response.data : 
+                          (response.data.hospitals || response.data.data || []);
+        
+        // Ensure each hospital has id and name properties
+        hospitalData = hospitalData.map((hospital: any) => ({
+          id: hospital.id || hospital._id || hospital.hospitalId || '',
+          name: hospital.name || hospital.hospitalName || ''
+        }));
+        
+        setHospitals(hospitalData);
       } catch (err) {
         console.error('Failed to fetch hospitals:', err);
         setError('Failed to load hospitals. Please try again later.');
@@ -137,22 +149,26 @@ export default function DoctorRegistration({ step, setStep }: DoctorRegistration
     // Validate username, password, confirm_password
     if (!formData.username || formData.username.length < 4) {
       setError("Username must be at least 4 characters");
+      toast.error("Username must be at least 4 characters");
       return false;
     }
     
     if (!formData.password || formData.password.length < 8) {
       setError("Password must be at least 8 characters");
+      toast.error("Password must be at least 8 characters");
       return false;
     }
     
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])/;
     if (!passwordRegex.test(formData.password)) {
       setError("Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character");
+      toast.error("Password must meet complexity requirements");
       return false;
     }
     
     if (formData.password !== formData.confirm_password) {
       setError("Passwords do not match");
+      toast.error("Passwords do not match");
       return false;
     }
     
@@ -165,48 +181,57 @@ export default function DoctorRegistration({ step, setStep }: DoctorRegistration
     // Validate personal and professional info
     if (!formData.given_name || formData.given_name.length < 2) {
       setError("First name must be at least 2 characters");
+      toast.error("First name must be at least 2 characters");
       return false;
     }
     
     if (!formData.family_name || formData.family_name.length < 2) {
       setError("Last name must be at least 2 characters");
+      toast.error("Last name must be at least 2 characters");
       return false;
     }
     
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!formData.email || !emailRegex.test(formData.email)) {
       setError("Invalid email address");
+      toast.error("Invalid email address");
       return false;
     }
     
     const phoneRegex = /^\+?[1-9]\d{9,14}$/;
     if (!formData.phone || !phoneRegex.test(formData.phone)) {
       setError("Phone number must start with a '+' followed by 9 to 14 digits");
+      toast.error("Invalid phone number format");
       return false;
     }
     
     if (!formData.specialty) {
       setError("Specialty is required");
+      toast.error("Please select your specialty");
       return false;
     }
     
     if (!formData.years_of_experience) {
       setError("Years of experience is required");
+      toast.error("Please enter your years of experience");
       return false;
     }
     
     if (!formData.license_number || formData.license_number.length < 5) {
       setError("Valid license number is required");
+      toast.error("Please enter a valid license number");
       return false;
     }
     
     if (!formData.consultation_fee) {
       setError("Consultation fee is required");
+      toast.error("Please enter your consultation fee");
       return false;
     }
     
     if (!formData.hospital_id) {
       setError("Hospital affiliation is required");
+      toast.error("Please select your hospital affiliation");
       return false;
     }
     
@@ -223,11 +248,13 @@ export default function DoctorRegistration({ step, setStep }: DoctorRegistration
       if (timing.enabled) {
         if (!timing.startTime || !timing.endTime) {
           setError("Please set both start and end times for enabled days");
+          toast.error("Please set both start and end times for enabled days");
           return false;
         }
         
         if (timing.startTime >= timing.endTime) {
           setError("End time must be after start time");
+          toast.error("End time must be after start time");
           return false;
         }
         
@@ -237,6 +264,7 @@ export default function DoctorRegistration({ step, setStep }: DoctorRegistration
     
     if (!hasValidSchedule) {
       setError("Please enable at least one day in your schedule");
+      toast.error("Please enable at least one day in your schedule");
       return false;
     }
     
@@ -253,7 +281,7 @@ export default function DoctorRegistration({ step, setStep }: DoctorRegistration
       setError("");
       
       // Format the data as needed
-      const formattedData: DoctorRegistrationData = {
+      const formattedData = {
         ...formData,
         phone: formData.phone.startsWith('+') ? formData.phone : `+${formData.phone}`,
         // Filter out disabled days or format as needed
@@ -265,20 +293,12 @@ export default function DoctorRegistration({ step, setStep }: DoctorRegistration
       if (response.data.success) {
         const { doctorToken, doctorId } = response.data.data;
         setAuthCookies(doctorToken!, doctorId!, 'doctor');
-        toast({
-          title: "Registration successful",
-          description: "You have been registered as a doctor",
-          variant: "default",
-        });
+        toast.success("Registration successful! You have been registered as a doctor.");
         router.push('/doctor/dashboard');
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
-      toast({
-        title: "Registration failed",
-        description: err.response?.data?.message || 'Registration failed. Please try again.',
-        variant: "destructive",
-      });
+      toast.error(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
