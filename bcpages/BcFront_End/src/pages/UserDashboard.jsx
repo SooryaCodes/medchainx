@@ -2,14 +2,14 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 
-const UserDashboard = () => {
+const UserDashboard = ({ userId }) => {
   const [activeTab, setActiveTab] = useState("labResults");
   const [patientData, setPatientData] = useState(null);
 
   useEffect(() => {
     const fetchPatientData = async () => {
       try {
-        const response = await fetch("http://localhost:3000/api/patient/get-patient-by-name/John Doe"); // Replace with dynamic name if needed
+        const response = await fetch(`http://localhost:3000/api/patient/get-patient-by-name/${userId}`);
         if (!response.ok) throw new Error("Failed to fetch patient data");
         const data = await response.json();
         setPatientData(data.patientRecord);
@@ -19,7 +19,7 @@ const UserDashboard = () => {
     };
 
     fetchPatientData();
-  }, []);
+  }, [userId]);
 
   if (!patientData) return <p>Loading patient data...</p>;
 
@@ -57,8 +57,17 @@ const UserDashboard = () => {
             <Button onClick={() => setActiveTab("labResults")}>Lab Results</Button>
             <Button onClick={() => setActiveTab("diagnosis")}>Diagnosis</Button>
             <Button onClick={() => setActiveTab("treatment")}>Treatment</Button>
+            <Button onClick={() => setActiveTab("medicalHistory")}>Medical History</Button>
           </div>
-          <p>{patientData.medicalRecords?.[activeTab]}</p>
+          {activeTab === "medicalHistory" ? (
+            <ul className="list-disc ml-4">
+              {patientData.medicalHistory.map((event, index) => (
+                <li key={index}>{event.diagnosedOn} - {event.condition}</li>
+              ))}
+            </ul>
+          ) : (
+            <p>{patientData.medicalRecords?.[activeTab]}</p>
+          )}
         </CardContent>
       </Card>
 
@@ -75,4 +84,6 @@ const UserDashboard = () => {
       </Card>
     </div>
   );
-}
+};
+
+export default UserDashboard;
