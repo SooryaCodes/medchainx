@@ -1,9 +1,12 @@
 import axios from 'axios';
 import { IPatient, IMedicalReport } from '../models';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 export class OpenAIService {
   private apiKey: string;
-  private apiUrl: string = 'https://api.openai.com/v1/chat/completions';
+  private apiUrl: string = 'https://api.anthropic.com/v1/messages';
 
   constructor() {
     // Get API key from environment variables
@@ -82,31 +85,26 @@ export class OpenAIService {
       const response = await axios.post(
         this.apiUrl,
         {
-          model: 'gpt-4-turbo',
+          model: 'gpt-3.5-turbo',
           messages: [
-            {
-              role: 'system',
-              content: 'You are a medical AI assistant that analyzes patient data to identify potential health risks. Provide analysis in JSON format only.'
-            },
             {
               role: 'user',
               content: prompt
             }
           ],
-          temperature: 0.3,
           max_tokens: 2000,
-          response_format: { type: 'json_object' }
         },
         {
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${this.apiKey}`
+            'x-api-key': this.apiKey,
+            'anthropic-version': '2023-06-01'
           }
         }
       );
 
       // Parse and return the response
-      const result = response.data.choices[0].message.content;
+      const result = response.data.content[0].text;
       return JSON.parse(result);
     } catch (error) {
       console.error('Error generating health risk analysis:', error);

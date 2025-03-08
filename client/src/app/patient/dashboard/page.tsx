@@ -203,26 +203,6 @@ const mockChartData = {
   }
 };
 
-// Define the fetchHealthRisks function before using it in useEffect
-const fetchHealthRisks = async () => {
-  if (!patient || !patient.id) return;
-  
-  setIsLoadingRisks(true);
-  setRiskError(null);
-  
-  try {
-    const response = await axios.get(`/${patient.id}/health-risks`);
-    if (response.data && Array.isArray(response.data)) {
-      setRiskFactors(response.data);
-    }
-  } catch (error) {
-    console.error("Error fetching health risks:", error);
-    setRiskError("Failed to load health risk data. Please try again later.");
-  } finally {
-    setIsLoadingRisks(false);
-  }
-};
-
 export default function PatientDashboard() {
   const { patient, loading, error, logout, token, fetchPatient, remainingTime, setRemainingTime } = usePatient();
   const router = useRouter();
@@ -238,15 +218,59 @@ export default function PatientDashboard() {
   const [formattedTime, setFormattedTime] = useState<string | null>(null);
   const [showProfile, setShowProfile] = useState(false);
   const [patientMedicalRecords, setPatientMedicalRecords] = useState<DashboardMedicalRecord[]>([]);
-  const [riskFactors, setRiskFactors] = useState([
-    { name: "Cardiovascular Disease", risk: "Moderate", score: 65, recommendations: ["Regular exercise", "Low-sodium diet", "Stress management"] },
-    { name: "Type 2 Diabetes", risk: "Low", score: 30, recommendations: ["Regular blood sugar monitoring", "Balanced diet"] },
-    { name: "Hypertension", risk: "High", score: 80, recommendations: ["Blood pressure monitoring", "Medication adherence", "Reduced salt intake"] }
-  ]);
+  const [riskFactors, setRiskFactors] = useState<any[]>([]);  // Initialize as empty array
   const [isLoadingRisks, setIsLoadingRisks] = useState(false);
   const [riskError, setRiskError] = useState<string | null>(null);
 
-  // Transform MongoDB medical reports to DashboardMedicalRecord format when patient data is loaded
+  const fetchHealthRisks = async () => {
+    console.log("fetchHealthRisks called");
+    
+    setIsLoadingRisks(true);
+    setRiskError(null);
+    
+    try {
+      if (patient) {
+        console.log(patient, "patient");
+        try {
+          const response = await axios.get(`/patient/${(patient as any)._id}/health-risks`);
+          console.log(response.data, "response.data health risk");
+          
+          if (response.data && Array.isArray(response.data)) {
+            setRiskFactors(response.data);
+          } else {
+            // Fallback to mock data if API doesn't return proper format
+            setRiskFactors([
+              { name: "Cardiovascular Disease", risk: "Moderate", score: 65, recommendations: ["Regular exercise", "Low-sodium diet", "Stress management"] },
+              { name: "Type 2 Diabetes", risk: "Low", score: 30, recommendations: ["Regular blood sugar monitoring", "Balanced diet"] },
+              { name: "Hypertension", risk: "High", score: 80, recommendations: ["Blood pressure monitoring", "Medication adherence", "Reduced salt intake"] }
+            ]);
+          }
+        } catch (apiError) {
+          console.error("API error:", apiError);
+          // Fallback to mock data on API error
+          setRiskFactors([
+            { name: "Cardiovascular Disease", risk: "Moderate", score: 65, recommendations: ["Regular exercise", "Low-sodium diet", "Stress management"] },
+            { name: "Type 2 Diabetes", risk: "Low", score: 30, recommendations: ["Regular blood sugar monitoring", "Balanced diet"] },
+            { name: "Hypertension", risk: "High", score: 80, recommendations: ["Blood pressure monitoring", "Medication adherence", "Reduced salt intake"] }
+          ]);
+        }
+      } else {
+        // If no patient ID, use mock data
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
+        setRiskFactors([
+          { name: "Cardiovascular Disease", risk: "Moderate", score: 65, recommendations: ["Regular exercise", "Low-sodium diet", "Stress management"] },
+          { name: "Type 2 Diabetes", risk: "Low", score: 30, recommendations: ["Regular blood sugar monitoring", "Balanced diet"] },
+          { name: "Hypertension", risk: "High", score: 80, recommendations: ["Blood pressure monitoring", "Medication adherence", "Reduced salt intake"] }
+        ]);
+      }
+    } catch (error) {
+      console.error("Error in health risk analysis:", error);
+      setRiskError("Failed to load health risk data. Please try again later.");
+    } finally {
+      setIsLoadingRisks(false);
+    }
+  };
+
   useEffect(() => {
     if (patient && patient.medicalReports && patient.medicalReports.length > 0) {
       const transformedRecords = patient.medicalReports.map((report: any) => {
@@ -295,15 +319,6 @@ export default function PatientDashboard() {
     }
   }, [patient]);
 
-  const handleRecordSelect = (record: DashboardMedicalRecord) => {
-    setSelectedMedicalRecord(record);
-  };
-
-  const handleCloseRecord = () => {
-    setSelectedMedicalRecord(null);
-  };
-
-  // Check for existing token in cookies on component mount
   useEffect(() => {
     const checkExistingToken = () => {
       const cookies = document.cookie.split(';');
@@ -349,6 +364,53 @@ export default function PatientDashboard() {
       fetchPatient();
     }
   }, [token, patient, fetchPatient]);
+
+  useEffect(() => {
+    if (!tokenExpiry) return;
+    
+    const updateRemainingTime = () => {
+      const now = new Date();
+      const diff = tokenExpiry.getTime() - now.getTime();
+      
+      if (diff <= 0) {
+        setGeneratedToken(null);
+        setTokenExpiry(null);
+        setTokenCreationTime(null);
+        setRemainingTime(null);
+        // Clear cookies
+        document.cookie = "medToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        document.cookie = "medTokenExpiry=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        document.cookie = "medTokenCreated=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        return;
+      }
+      
+      // Format the time as a string before setting it
+      const totalSeconds = diff / 1000;
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = Math.floor(totalSeconds % 60);
+      setRemainingTime(totalSeconds.toString());
+      setFormattedTime(`${hours}:${minutes}:${seconds}`);
+    };
+    
+    updateRemainingTime();
+    const interval = setInterval(updateRemainingTime, 1000);
+    
+    return () => clearInterval(interval);
+  }, [tokenExpiry]);
+
+  useEffect(() => {
+    // Remove this effect that automatically fetches risks when tab changes
+    // We'll only fetch when the user clicks the button now
+  }, [activeTab, patient]);
+
+  const handleRecordSelect = (record: DashboardMedicalRecord) => {
+    setSelectedMedicalRecord(record);
+  };
+
+  const handleCloseRecord = () => {
+    setSelectedMedicalRecord(null);
+  };
 
   const handleGenerateToken = () => {
     setIsGeneratingToken(true);
@@ -411,41 +473,6 @@ export default function PatientDashboard() {
     }, 1500);
   };
 
-  // Update remaining time
-  useEffect(() => {
-    if (!tokenExpiry) return;
-    
-    const updateRemainingTime = () => {
-      const now = new Date();
-      const diff = tokenExpiry.getTime() - now.getTime();
-      
-      if (diff <= 0) {
-        setGeneratedToken(null);
-        setTokenExpiry(null);
-        setTokenCreationTime(null);
-        setRemainingTime(null);
-        // Clear cookies
-        document.cookie = "medToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-        document.cookie = "medTokenExpiry=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-        document.cookie = "medTokenCreated=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-        return;
-      }
-      
-      // Format the time as a string before setting it
-      const totalSeconds = diff / 1000;
-      const hours = Math.floor(totalSeconds / 3600);
-      const minutes = Math.floor((totalSeconds % 3600) / 60);
-      const seconds = Math.floor(totalSeconds % 60);
-      setRemainingTime(totalSeconds.toString());
-      setFormattedTime(`${hours}:${minutes}:${seconds}`);
-    };
-    
-    updateRemainingTime();
-    const interval = setInterval(updateRemainingTime, 1000);
-    
-    return () => clearInterval(interval);
-  }, [tokenExpiry]);
-
   const handleCopyToken = () => {
     if (generatedToken) {
       navigator.clipboard.writeText(generatedToken);
@@ -453,7 +480,6 @@ export default function PatientDashboard() {
     }
   };
 
-  // Calculate percentage of time remaining
   const calculateTimeRemainingPercentage = () => {
     if (!tokenExpiry || !tokenCreationTime) return 0;
     
@@ -465,7 +491,6 @@ export default function PatientDashboard() {
     return 100 - percentage; // Return remaining percentage
   };
 
-  // Update token display formatting
   const formatTokenForDisplay = (token: string) => {
     if (!token) return "";
     const firstPart = token.substring(0, 8);
@@ -475,13 +500,11 @@ export default function PatientDashboard() {
     return `${firstPart}${maskedPart}${lastPart}`;
   };
 
-  // Handle closing modal without removing token
   const handleCloseModal = () => {
     setShowTokenModal(false);
     // Don't reset token state, just close the modal
   };
 
-  // Add MedChainX branding - Updated with white bg and blue theme
   const renderMedChainX = () => (
     <div className="mb-6 p-4 bg-white dark:bg-gray-800 rounded-lg border-2 border-blue-500 shadow-md hover:shadow-lg transition-all overflow-hidden relative">
       <div className="flex items-center justify-between">
@@ -511,7 +534,6 @@ export default function PatientDashboard() {
     </div>
   )
 
-  // If loading, show loading state
   if (loading) {
     return (
       <div className="container mx-auto p-6">
@@ -525,7 +547,6 @@ export default function PatientDashboard() {
     );
   }
   
-  // If error, show error state
   if (error) {
     return (
       <div className="container mx-auto p-6">
@@ -539,23 +560,14 @@ export default function PatientDashboard() {
     );
   }
   
-  // Add this function to handle closing the profile
   const handleCloseProfile = () => {
     setShowProfile(false);
   };
-  
-  // Now use it in useEffect
-  useEffect(() => {
-    if (activeTab === "risks") {
-      fetchHealthRisks();
-    }
-  }, [activeTab, patient]);
   
   return (
     <div className="container mx-auto p-6">
       {renderMedChainX()}
       
-      {/* Token Generation Modal */}
       {showTokenModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6 animate-in fade-in zoom-in duration-300">
@@ -679,7 +691,6 @@ export default function PatientDashboard() {
                   Share this token with your healthcare provider
                 </p>
                 
-                {/* Enhanced Token Display */}
                 <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 p-4 rounded-md mb-4 relative border border-gray-200 dark:border-gray-600 shadow-inner">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-medium text-gray-500 dark:text-gray-400">ACCESS TOKEN</span>
@@ -701,7 +712,6 @@ export default function PatientDashboard() {
                   </button>
                 </div>
                 
-                {/* Enhanced Token Expiry Countdown */}
                 <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg border border-blue-200 dark:border-blue-800 p-4 shadow-sm">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center">
@@ -795,7 +805,6 @@ export default function PatientDashboard() {
         </div>
       )}
       
-      {/* Enhanced Active Token Indicator */}
       {generatedToken && tokenExpiry && (
         <div className="fixed bottom-4 right-4 z-40">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-4 border border-gray-200 dark:border-gray-700 max-w-xs animate-in slide-in-from-right-10 duration-300 hover:shadow-2xl transition-all">
@@ -812,7 +821,7 @@ export default function PatientDashboard() {
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                   </svg>
                 </button>
                 <button 
@@ -849,7 +858,6 @@ export default function PatientDashboard() {
       )}
       
       <div className="container mx-auto px-4 py-8">
-        {/* Header Section - Modified to include patient name and logout button */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Patient Dashboard</h1>
@@ -890,7 +898,6 @@ export default function PatientDashboard() {
           />
         )}
         
-        {/* Main Dashboard Tabs - REVERTED TO ORIGINAL */}
         <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid grid-cols-5 md:w-[750px]">
             <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -900,9 +907,7 @@ export default function PatientDashboard() {
             <TabsTrigger value="insights">AI Insights</TabsTrigger>
           </TabsList>
           
-          {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
-            {/* Token Generation Card - REVERTED TO ORIGINAL */}
             <Card className={`${generatedToken ? 'bg-gradient-to-r from-blue-500 to-blue-700' : 'bg-gradient-to-r from-blue-500 to-blue-600'} text-white hover:shadow-lg transition-all border-none mb-6`}>
               <CardContent className="pt-6">
                 <div className="flex flex-col md:flex-row items-center justify-between">
@@ -964,7 +969,6 @@ export default function PatientDashboard() {
                   )}
                 </div>
                 
-                {/* Progress bar for active token */}
                 {generatedToken && (
                   <div className="mt-4">
                     <div className="w-full bg-white/20 rounded-full h-2 overflow-hidden">
@@ -978,18 +982,15 @@ export default function PatientDashboard() {
               </CardContent>
             </Card>
             
-            {/* Health Metrics Grid */}
             <div className="">
               <HealthMetricsGrid metrics={healthMetrics} />
             </div>
             
-            {/* Health Charts */}
             <div className="mt-6">
               <HealthCharts chartData={mockChartData} />
             </div>
           </TabsContent>
           
-          {/* Medical History Tab */}
           <TabsContent value="history" className="space-y-6">
             {selectedMedicalRecord ? (
               <MedicalRecordDetail 
@@ -1004,7 +1005,6 @@ export default function PatientDashboard() {
             )}
           </TabsContent>
           
-          {/* Medications Tab */}
           <TabsContent value="medications" className="space-y-6">
             <Card className="bg-white/90 dark:bg-gray-800/90 hover:shadow-md transition-all border border-gray-100 dark:border-gray-700">
               <CardHeader>
@@ -1085,7 +1085,6 @@ export default function PatientDashboard() {
             </Card>
           </TabsContent>
           
-          {/* Health Risks Tab */}
           <TabsContent value="risks" className="space-y-6">
             <Card className="bg-white/90 dark:bg-gray-800/90 hover:shadow-md transition-all border border-gray-100 dark:border-gray-700">
               <CardHeader>
@@ -1114,38 +1113,54 @@ export default function PatientDashboard() {
                       Try Again
                     </Button>
                   </div>
-                ) : (
-                <div className="space-y-4">
-                  {riskFactors.map((factor, index) => (
+                ) : riskFactors.length > 0 ? (
+                  <div className="space-y-4">
+                    {riskFactors.map((factor, index) => (
                       <div key={index} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all">
-                      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-2">
-                        <h4 className="font-semibold">{factor.name}</h4>
-                        <span className={`text-sm font-medium px-2 py-1 rounded-full ${
-                          factor.risk === "High" ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300" :
-                          factor.risk === "Moderate" ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300" :
-                          "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                        }`}>
-                          {factor.risk} Risk
-                        </span>
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-2">
+                          <h4 className="font-semibold">{factor.name}</h4>
+                          <span className={`text-sm font-medium px-2 py-1 rounded-full ${
+                            factor.risk === "High" ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300" :
+                            factor.risk === "Moderate" ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300" :
+                            "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                          }`}>
+                            {factor.risk} Risk
+                          </span>
+                        </div>
+                        <Progress value={factor.score} className="h-2 mb-2" />
+                        <div className="mt-2">
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Recommendations:</p>
+                          <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside">
+                            {factor.recommendations.map((rec, i) => (
+                              <li key={i}>{rec}</li>
+                            ))}
+                          </ul>
+                        </div>
                       </div>
-                      <Progress value={factor.score} className="h-2 mb-2" />
-                      <div className="mt-2">
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Recommendations:</p>
-                        <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside">
-                          {factor.recommendations.map((rec, i) => (
-                            <li key={i}>{rec}</li>
-                          ))}
-                        </ul>
-                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-full mb-4">
+                      <BarChart3 className="h-10 w-10 text-blue-500" />
                     </div>
-                  ))}
-                </div>
+                    <h3 className="text-xl font-semibold mb-2">Analyze Your Health Risks</h3>
+                    <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md">
+                      Get personalized health risk assessments based on your medical history and current health metrics.
+                    </p>
+                    <Button 
+                      onClick={fetchHealthRisks} 
+                      className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 px-6 py-2 shadow-md"
+                    >
+                      <AlertTriangle className="h-4 w-4" />
+                      Analyze Health Risks
+                    </Button>
+                  </div>
                 )}
               </CardContent>
             </Card>
           </TabsContent>
           
-          {/* AI Insights Tab */}
           <TabsContent value="insights" className="space-y-6">
             <AiHealthInsights patientName={patient?.name?.given?.[0] || "John"} />
           </TabsContent>
