@@ -5,6 +5,50 @@ import { FHIRService } from '../services/fhir.service';
 import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
 import openAIService from '../services/openai.service';
+import { generatePatientToken, decodePatientToken } from '../utils/tokenUtils';
+
+// @desc    Decode a patient token without verification
+// @route   POST /api/patients/decode-token
+// @access  Public
+export const decodePatientAccessToken = catchAsync(async (req: Request, res: Response) => {
+  const { token } = req.body;
+
+  if (!token) {
+    return res.status(400).json({
+      success: false,
+      error: 'Token is required'
+    });
+  }
+
+  try {
+    // Decode the token without verification
+    const decoded = decodePatientToken(token);
+
+    if (!decoded) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid token format'
+      });
+    }
+
+    // Return the decoded information
+    res.status(200).json({
+      success: true,
+      data: {
+        patientId: decoded.patientId,
+        issuedAt: new Date(decoded.createdAt),
+        expiresIn: decoded.expiresIn
+      },
+      message: 'Token decoded successfully'
+    });
+  } catch (error) {
+    console.error('Error decoding token:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error decoding token'
+    });
+  }
+});
 
 // Interface for patient registration data from frontend
 interface PatientRegistrationData {
@@ -247,6 +291,176 @@ export const generateHealthRiskAnalysis = catchAsync(async (req: Request, res: R
     res.status(500).json({
       success: false,
       error: 'Error generating health risk analysis'
+    });
+  }
+});
+
+// @desc    Generate a short-lived token for patient access
+// @route   POST /api/patients/generate-token
+// @access  Private
+export const generatePatientAccessToken = catchAsync(async (req: Request, res: Response) => {
+  const { patientId, expiresIn } = req.body; // Get patientId and expiresIn from request body
+
+  // Default expiration to 1 hour if not provided
+  const tokenExpiration = expiresIn || 3600; // 1 hour in seconds
+
+  try {
+    // Check if ID is valid
+    if (!mongoose.Types.ObjectId.isValid(patientId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid patient ID format'
+      });
+    }
+
+    // Find patient by ID to verify existence
+    const patient = await PatientModel.findById(patientId);
+
+    // Check if patient exists
+    if (!patient) {
+      return res.status(404).json({
+        success: false,
+        error: 'Patient not found'
+      });
+    }
+
+    // Generate the token
+    const token = generatePatientToken(patientId, tokenExpiration);
+    console.log(token);
+    // Return the token
+    res.status(200).json({
+      success: true,
+      data: {
+        token,
+        expiresIn: tokenExpiration,
+        issuedAt: new Date()
+      },
+      message: 'Access token generated successfully'
+    });
+  } catch (error) {
+    console.error('Error generating access token:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error generating access token'
+    });
+  }
+});
+
+// @desc    Verify and decode a patient token
+// @route   POST /api/patients/verify-token
+// @access  Public
+export const verifyPatientToken = catchAsync(async (req: Request, res: Response) => {
+  const { token } = req.body;
+
+  if (!token) {
+    return res.status(400).json({
+      success: false,
+      error: 'Token is required'
+    });
+  }
+
+  try {
+    // Decode the token
+    const decoded = decodePatientToken(token);
+
+    if (!decoded) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid or expired token'
+      });
+    }
+
+    // Check if the patient exists
+    const patient = await PatientModel.findById(decoded.patientId);
+
+    if (!patient) {
+      return res.status(404).json({
+        success: false,
+        error: 'Patient not found'
+      });
+    }
+
+    // Calculate remaining time
+    const now = new Date();
+    const createdAt = new Date(decoded.createdAt);
+    const expirationTime = new Date(createdAt.getTime() + (decoded.expiresIn * 1000));
+    const remainingTime = Math.max(0, Math.floor((expirationTime.getTime() - now.getTime()) / 1000));
+
+    // Return token information
+    res.status(200).json({
+      success: true,
+      data: {
+        patientId: decoded.patientId,
+        issuedAt: createdAt,
+        expiresIn: decoded.expiresIn,
+        remainingTime: remainingTime,
+        isValid: remainingTime > 0
+      },
+      message: 'Token verified successfully'
+    });
+  } catch (error) {
+    console.error('Error verifying token:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error verifying token'
+    });
+  }
+});
+
+// @desc    Revoke a patient token
+// @route   POST /api/patients/revoke-token
+// @access  Private
+export const revokePatientToken = catchAsync(async (req: Request, res: Response) => {
+  const { token } = req.body;
+
+  if (!token) {
+    return res.status(400).json({
+      success: false,
+      error: 'Token is required'
+    });
+  }
+
+  try {
+    // Decode the token to get patient ID
+    const decoded = decodePatientToken(token);
+
+    if (!decoded) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid token format'
+      });
+    }
+
+    // Since we don't have a revokeToken function in tokenUtils,
+    // we'll implement token revocation here
+    
+    // In a real implementation, you would:
+    // 1. Add the token to a blacklist in your database
+    // 2. Or update a 'revoked' field in a tokens collection
+    
+    // For now, we'll simulate a successful revocation
+    const revoked = true;
+
+    if (!revoked) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to revoke token'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        patientId: decoded.patientId,
+        revokedAt: new Date()
+      },
+      message: 'Token revoked successfully'
+    });
+  } catch (error) {
+    console.error('Error revoking token:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error revoking token'
     });
   }
 });

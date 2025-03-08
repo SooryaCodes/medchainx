@@ -235,7 +235,9 @@ export default function PatientDashboard() {
       if (patient) {
         console.log(patient, "patient");
         try {
-          const response = await axios.get(`/patient/${(patient as any)._id}/health-risks`);
+          // Use the token in the request headers
+          const headers = generatedToken ? { Authorization: `Bearer ${generatedToken}` } : {};
+          const response = await axios.get(`/patient/${(patient as any)._id}/health-risks`, { headers });
           console.log(response.data, "response.data health risk");
           
           if (response.data && response.data.data) {
@@ -677,65 +679,96 @@ export default function PatientDashboard() {
     setSelectedMedicalRecord(null);
   };
 
-  const handleGenerateToken = () => {
+  const handleGenerateToken = async () => {
     setIsGeneratingToken(true);
-    // Simulate token generation
-    setTimeout(() => {
-      setIsGeneratingToken(false);
-      const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXRpZW50SWQiOiIxMjM0NTYiLCJleHBpcnkiOiIyMDI0LTA1LTMwVDIzOjU5OjU5WiJ9";
-      setGeneratedToken(token);
-      
-      // Set token expiry based on selected duration
+    
+    try {
+      // Get selected duration from dropdown
       const expirySelect = document.getElementById("token-validity") as HTMLSelectElement;
       const expiryValue = expirySelect?.value || "1h";
-      const expiryTime = new Date();
-      let durationMs = 60 * 60 * 1000; // Default 1h
       
+      // Convert duration string to seconds
+      let expiresIn = 3600; // Default 1h in seconds
       switch(expiryValue) {
-        case "30m": 
-          durationMs = 30 * 60 * 1000;
-          expiryTime.setMinutes(expiryTime.getMinutes() + 30); 
-          break;
-        case "45m": 
-          durationMs = 45 * 60 * 1000;
-          expiryTime.setMinutes(expiryTime.getMinutes() + 45); 
-          break;
-        case "1h": 
-          durationMs = 60 * 60 * 1000;
-          expiryTime.setHours(expiryTime.getHours() + 1); 
-          break;
-        case "2h": 
-          durationMs = 2 * 60 * 60 * 1000;
-          expiryTime.setHours(expiryTime.getHours() + 2); 
-          break;
-        case "4h": 
-          durationMs = 4 * 60 * 60 * 1000;
-          expiryTime.setHours(expiryTime.getHours() + 4); 
-          break;
-        case "8h": 
-          durationMs = 8 * 60 * 60 * 1000;
-          expiryTime.setHours(expiryTime.getHours() + 8); 
-          break;
-        case "24h": 
-          durationMs = 24 * 60 * 60 * 1000;
-          expiryTime.setHours(expiryTime.getHours() + 24); 
-          break;
-        default: 
-          durationMs = 60 * 60 * 1000;
-          expiryTime.setHours(expiryTime.getHours() + 1);
+        case "30m": expiresIn = 30 * 60; break;
+        case "45m": expiresIn = 45 * 60; break;
+        case "1h": expiresIn = 60 * 60; break;
+        case "2h": expiresIn = 2 * 60 * 60; break;
+        case "4h": expiresIn = 4 * 60 * 60; break;
+        case "8h": expiresIn = 8 * 60 * 60; break;
+        case "24h": expiresIn = 24 * 60 * 60; break;
       }
       
-      setTokenExpiry(expiryTime);
-      setOriginalDuration(durationMs);
+      // Get selected data to share
+      const shareVitals = (document.getElementById("share-vitals") as HTMLInputElement)?.checked || false;
+      const shareMedications = (document.getElementById("share-medications") as HTMLInputElement)?.checked || false;
+      const shareHistory = (document.getElementById("share-history") as HTMLInputElement)?.checked || false;
+      const shareLab = (document.getElementById("share-lab") as HTMLInputElement)?.checked || false;
+      const shareRisk = (document.getElementById("share-risk") as HTMLInputElement)?.checked || false;
       
-      const creationTime = new Date();
-      setTokenCreationTime(creationTime);
+      // Get specific conditions
+      const shareCardiac = (document.getElementById("share-cardiac") as HTMLInputElement)?.checked || false;
+      const shareDiabetes = (document.getElementById("share-diabetes") as HTMLInputElement)?.checked || false;
+      const shareRespiratory = (document.getElementById("share-respiratory") as HTMLInputElement)?.checked || false;
+      const shareAllergies = (document.getElementById("share-allergies") as HTMLInputElement)?.checked || false;
       
-      // Set cookies with token, expiry and creation time
-      document.cookie = `medToken=${token}; expires=${expiryTime.toUTCString()}; path=/; secure; samesite=strict`;
-      document.cookie = `Expiry=${expiryTime.toUTCString()}; expires=${expiryTime.toUTCString()}; path=/; secure; samesite=strict`;
-      document.cookie = `medTokenCreated=${creationTime.toUTCString()}; expires=${expiryTime.toUTCString()}; path=/; secure; samesite=strict`;
-    }, 1500);
+      // Prepare scopes array based on selected options
+      const scopes = [];
+      if (shareVitals) scopes.push("vitals");
+      if (shareMedications) scopes.push("medications");
+      if (shareHistory) scopes.push("history");
+      if (shareLab) scopes.push("lab_results");
+      if (shareRisk) scopes.push("risk_assessments");
+      
+      // Add specific conditions if selected
+      if (shareCardiac) scopes.push("condition:cardiac");
+      if (shareDiabetes) scopes.push("condition:diabetes");
+      if (shareRespiratory) scopes.push("condition:respiratory");
+      if (shareAllergies) scopes.push("condition:allergies");
+      
+      // Call the API to generate token with correct parameters
+      const response = await axios.post('/patient/generate-token', {
+        patientId: (patient as any)._id,
+        expiresIn: expiresIn,
+        scopes: scopes.length > 0 ? scopes : ["basic_info"], // Default to basic_info if nothing selected
+        purpose: "Share medical data with healthcare provider"
+      });
+      
+      if (response.data && response.data.success) {
+        const tokenData = response.data.data;
+        setGeneratedToken(tokenData.token);
+        
+        // Calculate expiry time based on API response
+        const expiryTime = new Date(new Date(tokenData.issuedAt).getTime() + tokenData.expiresIn * 1000);
+        setTokenExpiry(expiryTime);
+        
+        // Set creation time
+        const creationTime = new Date(tokenData.issuedAt);
+        setTokenCreationTime(creationTime);
+        
+        // Set original duration in milliseconds
+        setOriginalDuration(tokenData.expiresIn * 1000);
+        
+        // Store token scopes
+        const tokenScopes = tokenData.scopes || scopes;
+        
+        // Set cookies with token, expiry, creation time and scopes
+        document.cookie = `medToken=${tokenData.token}; expires=${expiryTime.toUTCString()}; path=/; secure; samesite=strict`;
+        document.cookie = `medTokenExpiry=${expiryTime.toUTCString()}; expires=${expiryTime.toUTCString()}; path=/; secure; samesite=strict`;
+        document.cookie = `medTokenCreated=${creationTime.toUTCString()}; expires=${expiryTime.toUTCString()}; path=/; secure; samesite=strict`;
+        document.cookie = `medTokenScopes=${JSON.stringify(tokenScopes)}; expires=${expiryTime.toUTCString()}; path=/; secure; samesite=strict`;
+        
+        // Show success notification
+        // You could add a toast notification here
+      } else {
+        throw new Error(response.data?.message || "Failed to generate token");
+      }
+    } catch (error) {
+      console.error("Error generating token:", error);
+      // Could add error handling UI here
+    } finally {
+      setIsGeneratingToken(false);
+    }
   };
 
   const handleCopyToken = () => {
@@ -798,6 +831,31 @@ export default function PatientDashboard() {
       }}></div>
     </div>
   )
+
+  // Add this function to display token scopes in a readable format
+  const getTokenScopesDisplay = () => {
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+      const [name, value] = cookie.trim().split('=');
+      if (name === 'medTokenScopes') {
+        try {
+          const scopes = JSON.parse(decodeURIComponent(value));
+          return scopes.map((scope: string) => {
+            // Format scope for display
+            return scope
+              .replace('_', ' ')
+              .replace('condition:', '')
+              .split(' ')
+              .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(' ');
+          }).join(', ');
+        } catch (e) {
+          return "Basic Information";
+        }
+      }
+    }
+    return "Basic Information";
+  };
 
   if (loading) {
     return (
@@ -977,6 +1035,14 @@ export default function PatientDashboard() {
                   </button>
                 </div>
                 
+                {/* Add shared data scope information */}
+                <div className="mb-4 bg-blue-50 dark:bg-blue-900/20 p-4 rounded-md border border-blue-100 dark:border-blue-800">
+                  <h5 className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-2">Shared Data Access</h5>
+                  <p className="text-xs text-blue-700 dark:text-blue-400">
+                    {getTokenScopesDisplay()}
+                  </p>
+                </div>
+                
                 <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg border border-blue-200 dark:border-blue-800 p-4 shadow-sm">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center">
@@ -1031,14 +1097,33 @@ export default function PatientDashboard() {
                     variant="outline" 
                     className="border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
                     onClick={() => {
-                      setGeneratedToken(null);
-                      setTokenExpiry(null);
-                      setTokenCreationTime(null);
-                      // Clear cookies
-                      document.cookie = "medToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-                      document.cookie = "medTokenExpiry=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-                      document.cookie = "medTokenCreated=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-                      setShowTokenModal(false);
+                      // Call API to revoke token
+                      axios.post('/patient/revoke-token', {
+                        token: generatedToken
+                      }).then(() => {
+                        // Clear token state and cookies regardless of API response
+                        setGeneratedToken(null);
+                        setTokenExpiry(null);
+                        setTokenCreationTime(null);
+                        // Clear cookies
+                        document.cookie = "medToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                        document.cookie = "medTokenExpiry=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                        document.cookie = "medTokenCreated=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                        document.cookie = "medTokenScopes=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                        setShowTokenModal(false);
+                      }).catch(error => {
+                        console.error("Error revoking token:", error);
+                        // Still clear token state and cookies on error
+                        setGeneratedToken(null);
+                        setTokenExpiry(null);
+                        setTokenCreationTime(null);
+                        // Clear cookies
+                        document.cookie = "medToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                        document.cookie = "medTokenExpiry=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                        document.cookie = "medTokenCreated=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                        document.cookie = "medTokenScopes=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                        setShowTokenModal(false);
+                      });
                     }}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
